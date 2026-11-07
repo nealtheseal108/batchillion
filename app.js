@@ -211,24 +211,23 @@
   // A round played on day D only uses answers from days before D, so scores never move during a day and a
   // round keeps its score for good. Same tier rules as the stat sheets (ties share; one in a batchillion only
   // for a single lowest; at most 2 deep cuts; top quarter schooler) and the same fame cap.
-  const CROWD_MIN_PLAYERS = 12, SCHOOLER_SHARE = 0.65 /* schooler is the default middle tier (Neal, 11/7); = tools/sheetlib.py */, CROWD_W = 0.5, ORDER = ["plankton", "schooler", "rare", "deep", "krillion"];
+  const CROWD_MIN_PLAYERS = 12, CROWD_W = 0.5, ORDER = ["plankton", "schooler", "rare", "deep", "krillion"];
+  // Neal's split (11/7): top 20% plankton, next 40% schooler, next 25% rare, last 15% deep cut, cuts rounded
+  // up; a single lowest answer is the one in a batchillion. Ties share the tier where their group starts.
+  // Must match tools/sheetlib.py tiers() exactly (tools/crowd_port_test.js checks it).
   function tierize(vals) {
     const keys = Object.keys(vals), levels = [...new Set(keys.map((n) => vals[n]))].sort((a, b) => b - a);
-    const groups = levels.map((v) => keys.filter((n) => vals[n] === v)), out = {};
+    let groups = levels.map((v) => keys.filter((n) => vals[n] === v));
+    const out = {};
     if (!groups.length) return out;
-    groups[0].forEach((n) => (out[n] = "plankton"));
-    if (groups.length === 1) return out;
-    let lo = groups.length - 1;
-    if (groups[lo].length === 1) {
-      out[groups[lo][0]] = "krillion"; lo--;
-      if (lo >= 1 && groups[lo].length <= 2) { groups[lo].forEach((n) => (out[n] = "deep")); lo--; }
-    } else if (groups[lo].length <= 2) { groups[lo].forEach((n) => (out[n] = "deep")); lo--; }
-    if (lo === groups.length - 1 && lo >= 1) { groups[lo].forEach((n) => (out[n] = "rare")); lo--; }
-    const mid = groups.slice(1, lo + 1);
-    const count = mid.reduce((a, g) => a + g.length, 0) + Object.values(out).filter((t) => t === "rare" || t === "deep" || t === "krillion").length;
-    const x = count * SCHOOLER_SHARE, target = Math.abs(x - Math.trunc(x) - 0.5) < 1e-9 ? 2 * Math.round(x / 2) : Math.round(x);   // Python's round()
+    if (groups.length === 1) { groups[0].forEach((n) => (out[n] = "plankton")); return out; }
+    const kr = groups[groups.length - 1].length === 1 ? groups[groups.length - 1][0] : null;
+    if (kr) groups = groups.slice(0, -1);
+    const n = groups.reduce((a, g) => a + g.length, 0), up = (x) => Math.ceil(x - 1e-9);
+    const c1 = up(0.2 * n), c2 = up(0.6 * n), c3 = up(0.85 * n);
     let seen = 0;
-    mid.forEach((g) => { const t = seen + g.length <= Math.max(target, 1) ? "schooler" : "rare"; g.forEach((n) => (out[n] = t)); seen += g.length; });
+    groups.forEach((g) => { const t = seen < c1 ? "plankton" : seen < c2 ? "schooler" : seen < c3 ? "rare" : "deep"; g.forEach((x) => (out[x] = t)); seen += g.length; });
+    if (kr) out[kr] = "krillion";
     return out;
   }
   // Playing-time fame cap (roster.js PT_CAP, from points played per game vs that game's average).
@@ -645,8 +644,8 @@
         : `${more + 1}${["th", "st", "nd", "rd"][((more + 1) % 100 >> 3 ^ 1) && (more + 1) % 10] || "th"} highest`;
       out = `${person.full}: ${fmt(v)}, ${where} of the ${n} teammates who fit.`;
     } else out = `${n} teammates fit this one.`;
-    const reason = { plankton: "That's the most obvious answer, so plankton.", schooler: "An average answer, so schooler.",
-      rare: "Below the middle of the pack, so rare.", deep: "Right near the bottom, so a deep cut.",
+    const reason = { plankton: "That's in the top 20% most obvious answers, so plankton.", schooler: "That's in the next 40%, so schooler.",
+      rare: "That's in the next 25%, so rare.", deep: "That's in the bottom 15%, so a deep cut.",
       krillion: "Nobody else is this far down, so one in a batchillion." }[tier] || "";
     out += " " + reason;
     if (q.ratio) out += " Ratio questions also weigh points played, so big-minutes players count as more obvious.";

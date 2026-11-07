@@ -6,40 +6,36 @@ value; at most 2 deep cuts (a group of 1-2 at the bottom, or just above the batc
 the top quarter of the rest is schooler. Ratio questions rank by place in the ratio range plus share of points
 played; counts rank by the raw value. A playing-time cap then limits how obvious an answer can be.
 """
-import json
+import json, math
 
 TP = {'plankton': 10, 'schooler': 30, 'rare': 60, 'deep': 85, 'krillion': 100}
 ORDER = ['plankton', 'schooler', 'rare', 'deep', 'krillion']
-# Neal (11/7): schooler is the default, like the median; rare is only for people clearly below it.
-SCHOOLER_SHARE = 0.65
+
+
+def _ceil(x):
+    return math.ceil(x - 1e-9)   # "round up", without float noise turning 3.0 into 4
 
 
 def tiers(cnt):
-    counts = sorted(set(cnt.values()), reverse=True)
-    groups = [sorted(n for n, c in cnt.items() if c == v) for v in counts]
+    """Neal's split (11/7): rank every answer by its score; top 20% plankton, next 40% schooler, next 25%
+    rare, last 15% deep cut, each cut rounded up. A single lowest answer, if there is one, is the one in a
+    batchillion and sits outside the split. Tied answers share a tier: the tier where the group starts."""
+    levels = sorted(set(cnt.values()), reverse=True)
+    groups = [sorted(n for n, c in cnt.items() if c == v) for v in levels]
     out = {}
     if not groups: return out
-    for n in groups[0]: out[n] = 'plankton'
-    if len(groups) == 1: return out
-    lo = len(groups) - 1
-    if len(groups[lo]) == 1:
-        out[groups[lo][0]] = 'krillion'; lo -= 1
-        if lo >= 1 and len(groups[lo]) <= 2:
-            for n in groups[lo]: out[n] = 'deep'
-            lo -= 1
-    elif len(groups[lo]) <= 2:
-        for n in groups[lo]: out[n] = 'deep'
-        lo -= 1
-    if lo == len(groups) - 1 and lo >= 1:
-        for n in groups[lo]: out[n] = 'rare'
-        lo -= 1
-    mid = groups[1:lo + 1]
-    people = sum(len(g) for g in mid) + sum(1 for n in out if out[n] in ('rare', 'deep', 'krillion'))
-    target = round(people * SCHOOLER_SHARE); seen = 0
-    for g_ in mid:
-        tier = 'schooler' if seen + len(g_) <= max(target, 1) else 'rare'
-        for n in g_: out[n] = tier
-        seen += len(g_)
+    if len(groups) == 1:
+        return {n: 'plankton' for n in groups[0]}
+    kr = groups[-1][0] if len(groups[-1]) == 1 else None
+    if kr: groups = groups[:-1]
+    n = sum(len(g) for g in groups)
+    c1, c2, c3 = _ceil(.2 * n), _ceil(.6 * n), _ceil(.85 * n)
+    seen = 0
+    for g in groups:
+        t = 'plankton' if seen < c1 else 'schooler' if seen < c2 else 'rare' if seen < c3 else 'deep'
+        for x in g: out[x] = t
+        seen += len(g)
+    if kr: out[kr] = 'krillion'
     return out
 
 
