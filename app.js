@@ -426,9 +426,13 @@
     go(0, new Set(), 0);
     return best;
   }
-  const openRounds = () => ROUNDS.filter((r) => !r.unlock || dayIndex(dayKey) >= dayIndex(r.unlock));
+  // Unlocked rounds. Retired sheets drop out of the picker but keep their leaderboards (rounds already
+  // played on them still score against their original prompts).
+  const unlocked = () => ROUNDS.filter((r) => !r.unlock || dayIndex(dayKey) >= dayIndex(r.unlock));
+  const openRounds = () => unlocked().filter((r) => !r.retired);
   // Opens a round of the chosen type on the server (or picks up one left open), then plays it.
   async function startRound(btn, set = "classes") {
+    if (setOf(set).retired) return home();
     if (practice) return play([], 0, set);
     if (btn) btn.disabled = true;
     // iOS only raises the keyboard for focus() inside the tap itself, so hold it with a stand-in box.
@@ -616,7 +620,7 @@
         }).join("")}</ul>
         ${res.some(appealable) ? `<p class="hint">You get one appeal a day. ${esc(window.APPEAL_WHO)} ranks it and your score updates.</p>` : ""}
         <div class="row">
-          ${left || !spends(round.set) ? `<button class="btn" id="again" type="button">another ${esc(R.title.toLowerCase())}</button>` : ""}
+          ${!R.retired && (left || !spends(round.set)) ? `<button class="btn" id="again" type="button">another ${esc(R.title.toLowerCase())}</button>` : ""}
           <button class="btn ghost" id="rounds" type="button">pick a round</button>
           <button class="btn ghost" id="share" type="button">share</button>
           <button class="btn ghost" id="lb" type="button">leaderboard</button>
@@ -679,7 +683,7 @@
       return `<li class="${meRow ? "me" : ""}"><span class="rk">${rank}</span><span class="nm">${esc(r.name)}${meRow ? " (you)" : ""}</span><span class="sc">${r.yards}</span><span class="rd">${when(r)}</span></li>`;
     }).join("");
     $("#boardTabs").innerHTML = `
-      <div class="row lb-sets">${openRounds().map((r) => `<button class="chip${r.id === set ? " on" : ""}" data-s="${r.id}" type="button" aria-pressed="${r.id === set}">${esc(r.title)}</button>`).join("")}</div>
+      <div class="row lb-sets">${[...openRounds(), ...unlocked().filter((r) => r.retired)].map((r) => `<button class="chip${r.id === set ? " on" : ""}" data-s="${r.id}" type="button" aria-pressed="${r.id === set}">${esc(r.title)}${r.retired ? " (retired)" : ""}</button>`).join("")}</div>
       <div class="row">
         <button class="btn ${view === "today" ? "" : "ghost"}" data-v="today" type="button" aria-pressed="${view === "today"}">today</button>
         <button class="btn ${view === "all" ? "" : "ghost"}" data-v="all" type="button" aria-pressed="${view === "all"}">all-time best</button>
