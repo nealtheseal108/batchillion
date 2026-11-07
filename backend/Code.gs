@@ -18,7 +18,6 @@
  * "appeals" tab: tier = plankton, clever, schooler, rare, deep, krillion or reject; year = 2024
  * or 2022/2023. Everyone who typed that name gets the points on their next page load.
  */
-const NEAL_EMAIL = "nealtheseal108@gmail.com";
 const ZONE = "America/New_York";
 const PROMPTS = 7;
 const TABS = {
@@ -204,7 +203,8 @@ function doPost(e) {
       if (rows_("appeals").some((r) => day_(r.date) === date && norm_(r.player) === norm_(player))) return json_({ ok: false, error: "one appeal per day" });
       sheet_("appeals").appendRow([date, cell_(name), k, cell_(typed), "", "", new Date()]);
       try {
-        MailApp.sendEmail(NEAL_EMAIL, `Batchillion appeal: ${typed}`,
+        MailApp.sendEmail(Session.getEffectiveUser().getEmail(),   // the sheet owner (the script runs as them)
+           `Batchillion appeal: ${typed}`,
           `${name} appealed "${typed}" for prompt ${k + 1} on ${date}.\n\n` +
           `Rank it on the site (leaderboard > admin) or in the appeals tab: ${SpreadsheetApp.getActiveSpreadsheet().getUrl()}`);
       } catch (err) { /* the appeal is saved even if the email quota is used up */ }
