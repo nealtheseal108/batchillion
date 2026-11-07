@@ -89,7 +89,7 @@ window.ROSTER = [
 window.TIERS = {
   plankton: { label: "plankton",          pts: 10,  color: "#9aa3a6", caption: "that's the farthest i've seen nate throw" },
   clever:   { label: "too clever",        pts: 15,  color: "#c07a3e", caption: "bro that is NOT smart" },
-  schooler: { label: "schooler",          pts: 30,  color: "#7cc4ef", caption: "textbook swing. gets the disc moving" },
+  schooler: { label: "schooler",          pts: 30,  color: "#7cc4ef", caption: "average distance of a king hammer" },
   rare:     { label: "rare",              pts: 60,  color: "#ef5a51", caption: "schmeatball sub but caught by Gavin/Parker" },
   deep:     { label: "deep cut",          pts: 85,  color: "#a463e0", caption: () => (Math.random() < 0.5 ? `Blueberry for ${window.pickKrillion()}` : "this is as niche as the april 2025 leadership call with justin ford") },
   krillion: { label: "one in a batchillion", pts: 100, color: "#f2c230", caption: "Andrew's pulls" },

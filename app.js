@@ -191,7 +191,16 @@
     });
   }
   const sum = (rs) => rs.reduce((s, r) => s + r.pts, 0);
-  const playsOf = (player) => remote.plays.filter((pl) => norm(pl.player) === norm(player)).sort((a, b) => dayIndex(a.date) - dayIndex(b.date));
+  // One round per player per day. If the sheet ever holds two rows for the same day (an empty "pull"
+  // claim plus the real round), keep the one with the most answers so the score always totals.
+  const playsOf = (player) => {
+    const byDay = {};
+    remote.plays.filter((pl) => norm(pl.player) === norm(player)).forEach((pl) => {
+      const n = (pl.answers || []).length, cur = byDay[pl.date];
+      if (!cur || n > (cur.answers || []).length) byDay[pl.date] = pl;
+    });
+    return Object.values(byDay).sort((a, b) => dayIndex(a.date) - dayIndex(b.date));
+  };
   // Every round this player has thrown, in date order, with one running "used" set.
   function history(player) {
     const used = new Set(), rounds = [];
@@ -352,7 +361,7 @@
     if (!me) return auth();
     if (!(await pull())) return offlineCard(home);
     buildRoster();
-    const mine = remote.plays.find((p) => p.date === dayKey && norm(p.player) === norm(me.player));
+    const mine = playsOf(me.player).find((p) => p.date === dayKey);   // the fullest row for today
     const draft = practice ? [] : ls.get(draftKey(), []) || [];
     if (!practice && mine && (mine.answers || []).length) { ls.del(draftKey()); ls.del(clockKey()); return finish(true); }
     if (!practice && draft.length === P.length) return submitRound(draft); // finished but never reached the server
@@ -510,7 +519,7 @@
         <p class="who">${esc(r.person ? r.person.full : ans.typed || ans.reused || "no answer")}</p>
         ${t ? `<span class="tier">${esc(t.label)}</span><p class="yds">${t.pts} <small>pts${t.pts >= 100 ? " · caught in the end zone" : ""}</small></p><p class="cap">${esc(cap)}</p>`
             : `<p class="yds">0 <small>pts</small></p><p class="cap">${esc(window.ZERO_CAPTION)}</p><p class="small">${esc(r.status)}${ans.typed && !r.person ? " · you can appeal one name at the end" : ""}</p>`}
-        <div class="row"><button class="btn" id="next" type="button">${last ? "see your drive" : "next pull"}</button></div>
+        <div class="row"><button class="btn" id="next" type="button">${last ? "see how far you threw it" : "next pull"}</button></div>
       </div>`);
     $("#next").focus();
     $("#next").onclick = () => play(all);
@@ -518,7 +527,7 @@
 
   async function submitRound(answers) {
     if (practice) return finish(false, "", answers);
-    show(`<div class="card"><p class="kicker">BATCHILLION #${dayNum()}</p><p class="prompt">Sending your drive…</p></div>`);
+    show(`<div class="card"><p class="kicker">BATCHILLION #${dayNum()}</p><p class="prompt">Sending your throws…</p></div>`);
     const r = await post({ action: "play", date: dayKey, player: me.player, token: me.token, answers });
     if (r.ok || r.error === "already played today") {
       setPlayedCookie(); ls.del(draftKey()); ls.del(clockKey());
@@ -528,7 +537,7 @@
     }
     if (r.error === "sign in again") { me = null; ls.del("bh:session"); return auth("session expired. sign in again; your round is saved on this device and will send."); }
     // Keep the round on this device and let the player resend it. Nothing is lost.
-    show(`<div class="card"><p class="kicker">BATCHILLION #${dayNum()}</p><p class="prompt">Your drive didn't reach the server.</p>
+    show(`<div class="card"><p class="kicker">BATCHILLION #${dayNum()}</p><p class="prompt">Your round didn't reach the server.</p>
       <p class="hint">${esc(r.error || "unknown error")}. It's saved on this device.</p>
       <div class="row"><button class="btn" id="resend" type="button">resend</button></div></div>`);
     $("#resend").onclick = () => submitRound(answers);
@@ -553,13 +562,13 @@
     const verdict = VERDICTS.find(([m]) => tot >= m)[1];
     const myAppeal = remote.appeals.find((a) => a.date === dayKey && norm(a.player) === norm(me.player));
     const url = location.origin + location.pathname;
-    const share = `Batchillion #${dayNum()} 🥏 ${tot}${goals ? ` (${goals} goal${goals > 1 ? "s" : ""})` : ""}\n${res.map((r) => (r.tier ? SQUARES[r.tier] : "⬛")).join("")}\n${url}`;
+    const share = `Batchillion #${dayNum()} 🥏 ${tot} yds\n${res.map((r) => (r.tier ? SQUARES[r.tier] : "⬛")).join("")}\n${url}`;
     const appealable = (r) => !practiceAnswers && !myAppeal && !r.person && r.a.typed && norm(r.a.typed).replace(/ /g, "").length >= 2 && !candidates(r.a.typed).length;
     const st = streak(me.player);
     show(`
       <div class="card">
         <p class="kicker">BATCHILLION #${dayNum()} · ${returning ? "YOU ALREADY THREW TODAY" : "FINAL"}${st ? ` · STREAK ${st}` : ""}</p>
-        <p class="prompt"><em>${tot}</em> points${goals ? ` · ${goals} goal${goals > 1 ? "s" : ""}` : ""}</p>
+        <p class="prompt">You threw it <em>${tot}</em> yards</p>
         <p class="verdict">${esc(verdict)}</p>
         ${note ? `<p class="hint">${esc(note)}</p>` : ""}
         <ul class="recap">${res.map((r) => {

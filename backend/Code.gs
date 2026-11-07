@@ -189,8 +189,11 @@ function doPost(e) {
     const name = acct.name;   // store the account's own spelling of the name
 
     const plays = rows_("plays");
-    const mine = plays.find((r) => day_(r.date) === date && norm_(r.player) === norm_(player));
-    const thrown = !!mine && parse_(mine.answers).length > 0;
+    // All of this player's rows for the day: a round counts as thrown if ANY of them has answers, and an
+    // empty claim row is the one to fill in, so a day never ends up with two rows.
+    const minesToday = plays.filter((r) => day_(r.date) === date && norm_(r.player) === norm_(player));
+    const thrown = minesToday.some((r) => parse_(r.answers).length > 0);
+    const mine = minesToday.find((r) => parse_(r.answers).length === 0) || minesToday[0];
 
     // Start: claims today's round the moment the first prompt appears, so a round abandoned in a
     // second browser still counts as today's one round.
@@ -222,7 +225,8 @@ function doPost(e) {
       if (!dayOk_(date)) return json_({ ok: false, error: "that day is over" });
       const k = Number(b.prompt), typed = String(b.typed || "").trim().slice(0, 60);
       if (!(k >= 0 && k < PROMPTS && Math.floor(k) === k) || norm_(typed).replace(/ /g, "").length < 2) return json_({ ok: false, error: "bad request" });
-      const ans = mine ? parse_(mine.answers)[k] : null;
+      const thrownRow = minesToday.find((r) => parse_(r.answers).length > 0);
+      const ans = thrownRow ? parse_(thrownRow.answers)[k] : null;
       if (!ans || ans.full || norm_(ans.typed) !== norm_(typed)) return json_({ ok: false, error: "you can only appeal a name you threw today" });
       if (rows_("appeals").some((r) => day_(r.date) === date && norm_(r.player) === norm_(player))) return json_({ ok: false, error: "one appeal per day" });
       sheet_("appeals").appendRow([date, cell_(name), k, cell_(typed), "", "", new Date()]);
