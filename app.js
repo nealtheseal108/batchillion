@@ -189,6 +189,7 @@
       if (multi && pw.length === 1) return p.key === qf || p.key === ql;                      // Mitchell O'Connor, Josh Krause
       if (multi && pw.length > 1 && pl.length === 1) return pf === qf && ql.startsWith(pl);   // Ryan Boldin -> Ryan B
       if (multi && pw.length > 1 && qf.length === 1) return pf.startsWith(qf) && pl === ql;   // D Wu -> Daniel Wu
+      if (multi && pw.length > 1 && ql.length === 1) return pf === qf && pl.startsWith(ql);   // Andrew C -> Andrew Carneiro
       if (!multi && pw.length > 1 && q.length >= 3) return pl === q;                          // Mateer -> Brian Mateer
       return false;
     });
