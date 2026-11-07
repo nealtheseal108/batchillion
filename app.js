@@ -23,7 +23,32 @@
   let activeTimer = null;
   const stopTimer = () => { clearInterval(activeTimer); activeTimer = null; };
   let nav = 0; // bumps on every screen change, so a slow async screen can tell it was replaced
-  const show = (html) => { stopTimer(); nav++; stage.innerHTML = html; };
+  // Every card's content goes in an inner scroller, so on a short window the content scrolls inside the
+  // card's padding instead of sliding under its border.
+  const show = (html) => {
+    stopTimer(); nav++; stage.innerHTML = html;
+    const c = stage.querySelector(".card");
+    if (c) { const w = document.createElement("div"); w.className = "card-scroll"; while (c.firstChild) w.appendChild(c.firstChild); c.appendChild(w); }
+    fitField();
+  };
+  // Cards never scroll: the field gives up height instead. It keeps its 4:1 shape and shrinks just enough
+  // for the card and footer to fit on one screen under the header.
+  function fitField() {
+    const wrap = $(".field-wrap"), field = $("#field"), card = $("#stage .card"), foot = $(".foot");
+    if (!wrap || !field) return;
+    const px = (el, prop) => parseFloat(getComputedStyle(el)[prop]) || 0;
+    const frame = wrap.offsetWidth - field.clientWidth;                    // padding + border, both sides
+    const maxW = Math.min(1100, document.documentElement.clientWidth - px(document.body, "paddingLeft") * 2);
+    const st = $("#stage");
+    const used = px(wrap, "marginTop") + (card ? card.offsetHeight : 0) + px(st, "marginTop") + px(st, "marginBottom")
+      + (foot ? foot.offsetHeight + px(foot, "marginTop") + px(foot, "marginBottom") : 0);
+    const room = innerHeight - used - frame;                               // height left for the drawing
+    const h = Math.max(36, Math.min((maxW - frame) / 4, room));
+    wrap.style.width = Math.round(h * 4 + frame) + "px";
+  }
+  addEventListener("resize", () => fitField());
+  if (window.ResizeObserver) new ResizeObserver(() => fitField()).observe(stage);
+  if (document.fonts) document.fonts.ready.then(() => fitField());
 
   // ---------- day (Eastern time) ----------
   let skew = 0; // server clock minus device clock, so the day flips on the server's midnight
@@ -465,7 +490,7 @@
     if (!practice) ls.set(draftKey(), all);
     const prior = practice ? new Set() : usedBefore(me.player, dayKey);
     const r = scoreRound(all, new Set(prior))[k];
-    const h = stage.offsetHeight;
+    const h = (stage.querySelector(".card") || stage).offsetHeight;   // keep the placeholder the size of the card it replaces
     show(`<div class="card" style="min-height:${h}px"><p class="kicker">PROMPT ${all.length} / ${P.length}</p><p class="prompt">${r.pts ? "up it goes…" : "turnover."}</p></div>`);
     const mine = nav;
     if (r.pts) await huck(r.pts, T[r.tier].color, before);
@@ -570,7 +595,7 @@
     $("#share").onclick = async () => {
       if (navigator.share) { try { await navigator.share({ text: share }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
       try { await navigator.clipboard.writeText(share); toast("copied"); }
-      catch { const ta = document.createElement("textarea"); ta.value = share; stage.querySelector(".card").appendChild(ta); ta.select(); toast("select and copy"); }
+      catch { const ta = document.createElement("textarea"); ta.value = share; stage.querySelector(".card-scroll").appendChild(ta); ta.select(); toast("select and copy"); }
     };
     $("#lb").onclick = () => board();
     if (practiceAnswers) $("#again").onclick = () => home();

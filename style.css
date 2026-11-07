@@ -62,10 +62,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .dw-5 { width: 300px; height: 300px; right: -150px; top: 360px; transform: rotate(60deg); }
 body > header, .below { position: relative; z-index: 1; }
 /* exactly one screen tall: the page scrolls at most the header's height, nothing more */
-.below { flex: none; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+.below { flex: none; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
 .below > .field-wrap, .below > .foot { flex: none; }
-.below > .stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-.below > .stage > .card { max-height: 100%; overflow-y: auto; scrollbar-width: thin; }
+.below > .stage { flex: 1 0 auto; display: flex; flex-direction: column; }
+/* cards are never scrollable: they take their natural height and app.js shrinks the field to make room */
+.card-scroll { display: contents; }
 
 /* ---------- header: the Carolina-blue away kit, full bleed ---------- */
 .jersey {
@@ -109,7 +110,7 @@ h1 {
 /* ---------- field ---------- */
 .field-wrap {
   /* on short windows the field narrows (keeping its 4:1 shape) so the game card keeps room */
-  max-width: 1100px; width: min(100%, calc(32vh * 4 + 18px)); width: min(100%, calc(32dvh * 4 + 18px)); margin: clamp(10px, 2.6dvh, 24px) auto 0; padding: 5px;
+  max-width: 100%; width: 100%; margin: clamp(10px, 2.6dvh, 24px) auto 0; padding: 5px;   /* width set by fitField() in app.js */
   background: var(--white); border: 4px solid var(--navy); border-radius: 14px;
   box-shadow: 0 0 0 3px var(--white), 0 0 0 5px var(--navy);
 }
@@ -386,7 +387,6 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
 /* short windows (a laptop with the browser not maximized): tighten everything a step so the game card
    keeps its padding and fits, instead of scrolling inside itself */
 @media (max-height: 620px) {
-  .field-wrap { width: min(100%, calc(26dvh * 4 + 18px)); }
   .stage { margin: 10px auto 8px; }
   .card { padding: 16px 22px; }
   .card.result { padding-top: 24px; }
@@ -404,4 +404,24 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
   .result .cap { margin-bottom: 8px; font-size: 16px; }
   .legend { margin-top: 10px; padding-top: 12px; gap: 4px 14px; grid-template-columns: repeat(3, 1fr); }
   .foot { margin-bottom: 10px; }
+}
+
+/* very short windows (a small browser pane): shrink the field further so the card has room */
+@media (max-height: 440px) {
+  .field-wrap { margin-top: 8px; }
+  .stage { margin: 8px auto 6px; }
+  .card { padding: 12px 18px; }
+  .card.result { padding-top: 22px; }
+  .foot { margin-bottom: 6px; }
+  .prompt { font-size: 19px; margin-bottom: 8px; }
+  .kicker { font-size: 13px; margin-bottom: 2px; }
+  .btn { padding: 9px 14px 8px; font-size: 15px; }
+  .hint { font-size: 13px; margin-top: 4px; }
+  .clock { margin-bottom: 6px; }
+  .secs { font-size: 30px; }
+  input[type=text], input[type=password] { padding: 7px 11px; font-size: 16px; }
+  .foot > span { padding: 3px 9px 2px; }
+  .tunes { padding: 2px 4px 2px 8px; }
+  .tb { width: 26px; height: 26px; } .tb-play { width: 28px; height: 28px; }
+  .card .legend { display: none; }   /* the tier key is also in how to play */
 }
