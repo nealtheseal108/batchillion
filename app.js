@@ -597,24 +597,32 @@
       $("#lbRetry").onclick = () => board(view); return;
     }
     buildRoster();
+    // One row per finished round (not per player): best single rounds win. Today = rounds thrown today.
     const names = {};
     remote.plays.forEach((pl) => { names[norm(pl.player)] = names[norm(pl.player)] || pl.player; });
-    let list = Object.entries(names).map(([k, name]) => {
-      const h = history(name), t = todayOf(h);
-      return { k, name, today: t.rounds.length ? t.yards : null, todayRounds: t.rounds.length, all: h.rounds.reduce((s, r) => s + sum(r.results), 0), rounds: h.rounds.length, streak: streak(name) };
+    let list = [];
+    Object.values(names).forEach((name) => {
+      const h = history(name);
+      let nToday = 0;
+      h.rounds.forEach((r) => {
+        const isToday = r.date === dayKey; if (isToday) nToday++;
+        if (r.done || r.answers.length >= P.length) list.push({ name, yards: sum(r.results), date: r.date, isToday, nth: isToday ? nToday : 0 });
+      });
     });
-    const key = view === "today" ? "today" : "all";
-    list = list.filter((r) => r[key] != null && (view === "today" || r.rounds)).sort((a, b) => b[key] - a[key] || a.name.localeCompare(b.name));
+    if (view === "today") list = list.filter((r) => r.isToday);
+    list.sort((a, b) => b.yards - a.yards || a.name.localeCompare(b.name));
+    list = list.slice(0, 50);
+    const when = (r) => { if (r.isToday) return `round ${r.nth} today`; const [y, m, d] = dayParts(r.date); return `#${dayIndex(r.date) - FIRST + 1} · ${m}/${d}`; };
     let rank = 0;
     const rows = list.map((r, i) => {
-      if (i === 0 || r[key] !== list[i - 1][key]) rank = i + 1;
+      if (i === 0 || r.yards !== list[i - 1].yards) rank = i + 1;
       const meRow = me && norm(r.name) === norm(me.player);
-      return `<li class="${meRow ? "me" : ""}"><span class="rk">${rank}</span><span class="nm">${esc(r.name)}${meRow ? " (you)" : ""}</span><span class="sc">${r[key]}</span><span class="rd">${view === "today" ? `${r.todayRounds} rd` : `${r.rounds} rd${r.streak ? ` · streak ${r.streak}` : ""}`}</span></li>`;
+      return `<li class="${meRow ? "me" : ""}"><span class="rk">${rank}</span><span class="nm">${esc(r.name)}${meRow ? " (you)" : ""}</span><span class="sc">${r.yards}</span><span class="rd">${when(r)}</span></li>`;
     }).join("");
     $("#boardTabs").innerHTML = `
       <button class="btn ${view === "today" ? "" : "ghost"}" data-v="today" type="button" aria-pressed="${view === "today"}">today</button>
-      <button class="btn ${view === "all" ? "" : "ghost"}" data-v="all" type="button" aria-pressed="${view === "all"}">all-time</button>`;
-    body.innerHTML = list.length ? `<ol class="board">${rows}</ol>` : `<p class="hint">${view === "today" ? "nobody has thrown yet today. be first." : "no rounds yet."}</p>`;
+      <button class="btn ${view === "all" ? "" : "ghost"}" data-v="all" type="button" aria-pressed="${view === "all"}">all-time best</button>`;
+    body.innerHTML = list.length ? `<p class="hint">best single rounds, in yards</p><ol class="board">${rows}</ol>` : `<p class="hint">${view === "today" ? "nobody has finished a round today. be first." : "no rounds yet."}</p>`;
     dlg.querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => board(b.dataset.v)));
   }
   // Guarded: during a deploy a cached older page can lack this button, and a crash here would blank the game.
