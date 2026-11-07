@@ -182,6 +182,7 @@ input:focus { box-shadow: 0 0 0 3px var(--carolina); }
 .result .yds { font: 800 84px/.9 var(--num); margin: 16px 0 6px; font-variant-numeric: tabular-nums; color: var(--navy); }
 .result .yds small { font: 700 16px var(--text); color: var(--graphite); letter-spacing: 0; }
 .result .cap { margin: 0 0 18px; font-size: 17px; font-weight: 600; }
+.result .why { margin: -6px 0 18px; font: 500 14px/1.4 var(--text); color: var(--graphite); max-width: 60ch; text-wrap: pretty; }
 .who { margin: 0 0 6px; }
 .result .small { margin: -10px 0 18px; color: var(--graphite); font-size: 14px; }
 
@@ -393,6 +394,7 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
   .result .who { font-size: 24px; margin-bottom: 4px; }
   .result .yds { font-size: 46px; margin: 6px 0 2px; }
   .result .cap { margin-bottom: 8px; font-size: 16px; }
+  .result .why { margin: 0 0 12px; font-size: 13px; }
   .legend { margin-top: 10px; padding-top: 12px; gap: 4px 14px; grid-template-columns: repeat(3, 1fr); }
   .foot { margin-bottom: 10px; }
 }
@@ -465,4 +467,3 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
 .answers > summary { cursor: pointer; font: 800 14px/1.2 var(--num); letter-spacing: .16em; text-transform: uppercase; color: var(--graphite); padding: 6px 0 10px; list-style-position: inside; }
 .answers[open] > summary { color: var(--navy); }
 .guesses { margin: 6px 0 0; font: 800 13px/1.2 var(--num); letter-spacing: .14em; text-transform: uppercase; color: var(--graphite); }
-.result .why { margin: 8px 0 0; font: 500 14px/1.4 var(--text); color: var(--graphite); max-width: 60ch; text-wrap: pretty; }

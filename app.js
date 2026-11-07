@@ -680,7 +680,7 @@
         <p class="who">${esc(r.person ? r.person.full : ans.typed || ans.reused || "no answer")}</p>
         ${t ? `<span class="tier">${esc(t.label)}</span><p class="yds">${t.pts} <small>pts${t.pts >= 100 ? " · caught in the end zone" : ""}</small></p><p class="cap">${esc(cap)}</p><p class="why">${esc(whyTier(set, k, r.person, r.tier, dayKey))}</p>`
             : `<p class="yds">0 <small>pts</small></p><p class="cap">${esc(window.ZERO_CAPTION)}</p><p class="small">${esc(r.status)}${ans.typed && !r.person ? " · you can appeal one name at the end" : ""}</p>`}
-        <div class="row"><button class="btn" id="next" type="button">${last ? "see how far you threw it" : "next pull"}</button></div>
+        <div class="row"><button class="btn" id="next" type="button">${last ? "see how far you threw it" : "next throw"}</button></div>
       </div>`);
     $("#next").focus();
     $("#next").onclick = () => play(all, row, set);
