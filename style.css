@@ -137,12 +137,7 @@ h1 {
   border: 5px solid var(--navy); border-radius: 18px;
   box-shadow: inset 0 0 0 2px var(--white), inset 0 0 0 4px var(--carolina), 0 0 0 3px var(--ground), 0 0 0 5px var(--navy);
 }
-.card.result::before {   /* double sleeve stripe in the tier color */
-  content: ""; position: absolute; left: 22px; right: 22px; top: 0; height: 18px;
-  background: linear-gradient(var(--c) 0 6px, transparent 6px 10px, var(--c) 10px 16px);
-  border-radius: 0 0 4px 4px;
-}
-.card.result { padding-top: 40px; }
+
 .kicker { font: 800 15px/1.2 var(--num); letter-spacing: .2em; color: var(--graphite); margin: 0 0 10px; text-transform: uppercase; }
 .prompt { font: 800 clamp(23px, 4.6vw, 32px)/1.18 var(--display); margin: 0 0 20px; text-wrap: balance; color: var(--navy); }
 .prompt em {
@@ -287,8 +282,6 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
   #f > .btn { flex: none; padding: 14px 16px 13px; }
   #f input { font-size: 17px; }
   .card { padding: 20px 18px; border-width: 4px; border-radius: 14px; }
-  .card.result { padding-top: 32px; }
-  .card.result::before { left: 16px; right: 16px; height: 14px; background: linear-gradient(var(--c) 0 5px, transparent 5px 8px, var(--c) 8px 13px); }
   .row > .btn { flex: 1; }
   .secs { font-size: 44px; }
   .result .yds { font-size: 68px; }
@@ -389,8 +382,6 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
 @media (max-height: 620px) {
   .stage { margin: 10px auto 8px; }
   .card { padding: 16px 22px; }
-  .card.result { padding-top: 24px; }
-  .card.result::before { height: 14px; background: linear-gradient(var(--c) 0 5px, transparent 5px 8px, var(--c) 8px 13px); }
   .kicker { margin-bottom: 4px; }
   .prompt { font-size: 22px; margin-bottom: 10px; }
   .clock { margin-bottom: 10px; }
@@ -411,7 +402,6 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
   .field-wrap { margin-top: 8px; }
   .stage { margin: 8px auto 6px; }
   .card { padding: 12px 18px; }
-  .card.result { padding-top: 22px; }
   .foot { margin-bottom: 6px; }
   .prompt { font-size: 19px; margin-bottom: 8px; }
   .kicker { font-size: 13px; margin-bottom: 2px; }
