@@ -73,20 +73,6 @@ body > header, body > section, body > main, body > footer { position: relative; 
   content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 28px; z-index: 0; pointer-events: none;
   background: linear-gradient(to top, var(--carolina) 0 9px, var(--white) 9px 14px, var(--carolina) 14px 19px, var(--white) 19px 24px, var(--carolina) 24px);
 }
-.jersey-wm {
-  position: absolute; inset: -18px -40px auto -10px; z-index: -2;
-  display: flex; flex-wrap: wrap; gap: 0 .35em;
-  font: 900 clamp(64px, 11vw, 120px)/.9 var(--display); letter-spacing: .04em;
-  color: var(--band-wm); white-space: nowrap; pointer-events: none; user-select: none;
-}
-.jersey-wm span:nth-child(even) { transform: translateX(-.9em); }
-.flower-hd {
-  position: absolute; z-index: -1; display: block; pointer-events: none; overflow: visible;
-  width: 300px; height: 300px;
-  right: max(-70px, calc((100vw - 1100px) / 2 - 70px)); top: -92px;
-  --petal: var(--carolina); color: var(--navy);
-  opacity: .9; transform: rotate(-8deg);
-}
 .top { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; max-width: 1100px; width: 100%; margin: 0 auto; padding-top: 22px; }
 .brand { min-width: 0; }
 .season { margin: 0 0 4px; font: 800 15px/1 var(--num); letter-spacing: .2em; text-transform: uppercase; color: var(--navy); }
@@ -262,7 +248,6 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
   .season span { margin-left: 4px; padding: 2px 5px 1px; }
   h1 { font-size: 36px; text-shadow: 2px 2px 0 var(--white); }
   .flower-hd { width: 210px; height: 210px; top: -70px; right: -78px; }
-  .jersey-wm { font-size: 58px; }
   .tally { min-width: 78px; padding: 4px 8px 6px; box-shadow: 3px 3px 0 var(--navy); }
   .tally-label { font-size: 11px; letter-spacing: .18em; }
   #total { font-size: 38px; }
