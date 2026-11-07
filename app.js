@@ -464,7 +464,7 @@
     // The clock lives in storage, so reloading mid-prompt does not buy a fresh 30 seconds.
     let clock = practice ? null : ls.get(clockKey(), null);
     if (!clock || clock.i !== i || clock.row !== row) { clock = { row, i, t0: Date.now() }; if (!practice) ls.set(clockKey(), clock); }
-    const LIMIT = spends(set) ? SECONDS : FAST ? 2 : 20;   // Players 30s, stat sheets 20s
+    const LIMIT = SECONDS;   // 30s for every round type
     const deadline = clock.t0 + LIMIT * 1000;
     let locked = false, lastReject = "";
     const left = people.filter((p) => fits(PR[i], p) && !used.has(p.key)).length;
