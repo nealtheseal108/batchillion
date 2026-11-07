@@ -1,0 +1,45 @@
+# Adds a new Batchillion stat sheet every day at midnight Eastern (tools/daily_sheet.py).
+# Two cron times cover daylight saving: 04:00 UTC is midnight in EDT, 05:00 UTC is midnight in EST. The script
+# acts only between midnight and 3:59 Eastern (or on a manual run) and does nothing if today's sheet exists.
+name: daily stat sheet
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-sheet
+  cancel-in-progress: false
+
+jobs:
+  sheet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Make today's sheet
+        id: make
+        run: python3 tools/daily_sheet.py ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
+      - name: Check roster.js loads and the game's tier rules agree
+        if: steps.make.outputs.sheet != ''
+        run: |
+          node -e 'global.window=global;window.pickKrillion=()=>"";require(require("path").resolve("roster.js"));if(!window.ROUNDS.some(r=>r.id==="${{ steps.make.outputs.sheet }}"))process.exit(1)'
+          node tools/crowd_port_test.js roster.js app.js --only ${{ steps.make.outputs.sheet }}
+      - name: Commit and push
+        if: steps.make.outputs.sheet != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add roster.js index.html
+          git commit -m "daily stat sheet ${{ steps.make.outputs.day }}"
+          git push origin HEAD:main
