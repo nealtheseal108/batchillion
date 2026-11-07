@@ -28,6 +28,30 @@
 
   let player = null, ready = false, on = false, wanted = false, idx = 0, repeatOne = false, fadeTimer = null, endWatch = null;
 
+  // ---- Listens: one listen = a minute or more of real playing time in one play of a song (pauses
+  // don't count, skipping or reloading before a minute doesn't count; a looped repeat needs another
+  // minute). Shared counts live on the backend ("listen" action); with no backend, in this browser.
+  const LISTEN_MS = window.BH_FAST ? 3000 : 60000;
+  const API = window.BACKEND_URL || "";
+  let playMs = 0, counted = false, lastTick = 0;
+  const clientId = (() => {
+    try { let c = localStorage.getItem("bh:client"); if (!c) { c = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("bh:client", c); } return c; }
+    catch { return "anon"; }
+  })();
+  const localCounts = () => { try { return JSON.parse(localStorage.getItem("bh:listens") || "{}"); } catch { return {}; } };
+  function recordListen(song) {
+    if (!API) { const c = localCounts(); c[song] = (c[song] || 0) + 1; try { localStorage.setItem("bh:listens", JSON.stringify(c)); } catch {} return; }
+    fetch(API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "listen", song, client: clientId }) }).catch(() => {});
+  }
+  function newPlay() { playMs = 0; counted = false; lastTick = 0; }
+  setInterval(() => {   // pause-aware: only time while YouTube says the song is playing adds up
+    const now = Date.now();
+    let playing = false; try { playing = on && player && player.getPlayerState() === 1; } catch {}
+    if (playing && lastTick) playMs += Math.min(now - lastTick, 2000);
+    lastTick = playing ? now : 0;
+    if (playing && !counted && playMs >= LISTEN_MS) { counted = true; recordListen(MUSIC[idx].id); }
+  }, 500);
+
   function paint() {
     const t = MUSIC[idx];
     $("#pbTitle").textContent = t.title;
@@ -60,7 +84,7 @@
     }, 300);
   }
   function load(i) {
-    idx = (i + MUSIC.length) % MUSIC.length;
+    idx = (i + MUSIC.length) % MUSIC.length; newPlay();
     wanted = on = true;
     const t = MUSIC[idx];
     try {
@@ -111,6 +135,34 @@
   $("#pbNext").onclick = () => { pref.set("on"); next(); };
   $("#pbPrev").onclick = () => { pref.set("on"); prev(); };
   $("#pbLoop").onclick = () => { repeatOne = !repeatOne; paint(); };
+
+  // ---- Most played: the ranking, in a modal like How to play / Leaderboard.
+  const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  async function counts() {
+    if (!API) return localCounts();
+    try { const d = await (await fetch(API)).json(); return Object.fromEntries((d.listens || []).map((x) => [x.song, x.listens])); }
+    catch { return null; }
+  }
+  async function openSongs() {
+    const dlg = $("#songs"), body = $("#songsBody");
+    if (!dlg) return;
+    body.innerHTML = '<p class="hint">loading…</p>';
+    if (!dlg.open) dlg.showModal();
+    const c = await counts();
+    if (!c) { body.innerHTML = '<p class="hint">Can\'t reach the counts right now.</p>'; return; }
+    const list = MUSIC.map((t, i) => ({ ...t, i, n: c[t.id] || 0 })).sort((a, b) => b.n - a.n || a.i - b.i);
+    const top = Math.max(1, list[0].n);
+    let rank = 0;
+    body.innerHTML = '<ol class="songrank">' + list.map((t, k) => {
+      if (k === 0 || t.n !== list[k - 1].n) rank = k + 1;
+      return `<li><button type="button" class="sr-row" data-i="${t.i}" aria-label="play ${esc(t.title)}"><span class="sr-rk">${rank}</span>`
+        + `<span class="sr-txt"><span class="sr-t">${esc(t.title)}</span><span class="sr-a">${esc(t.artist)}</span>`
+        + `<span class="sr-bar"><i style="width:${Math.round((t.n / top) * 100)}%"></i></span></span>`
+        + `<span class="sr-n">${t.n}</span></button></li>`;
+    }).join("") + "</ol>";
+    body.querySelectorAll(".sr-row").forEach((b) => (b.onclick = () => { pref.set("on"); if (ready) load(+b.dataset.i); else { idx = +b.dataset.i; start(); } }));
+  }
+  if ($("#pbRank")) $("#pbRank").onclick = openSongs;
 
   // On by default: ask to play as soon as the player is ready; browsers that block sound until the
   // first interaction get it on the first tap or key press instead (unless paused this visit).

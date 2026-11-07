@@ -467,3 +467,17 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
 .answers > summary { cursor: pointer; font: 800 14px/1.2 var(--num); letter-spacing: .16em; text-transform: uppercase; color: var(--graphite); padding: 6px 0 10px; list-style-position: inside; }
 .answers[open] > summary { color: var(--navy); }
 .guesses { margin: 6px 0 0; font: 800 13px/1.2 var(--num); letter-spacing: .14em; text-transform: uppercase; color: var(--graphite); }
+
+/* Most played songs (footer graph icon) */
+.songs-note { margin: 0 0 10px; }
+.songrank { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sr-row { width: 100%; display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; align-items: center; gap: 10px; text-align: left;
+  background: var(--white); border: 2px solid var(--navy); border-radius: 10px; padding: 8px 12px; color: var(--navy); cursor: pointer; font: inherit; }
+.sr-row:hover { background: var(--carolina-tint); }
+.sr-rk { font: 800 18px/1 var(--num); font-variant-numeric: tabular-nums; text-align: center; }
+.sr-txt { min-width: 0; display: grid; gap: 2px; }
+.sr-t { font: 700 15px/1.2 var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sr-a { font: 500 12px/1.2 var(--text); color: var(--graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sr-bar { height: 6px; border-radius: 3px; background: var(--carolina-tint); overflow: hidden; margin-top: 3px; }
+.sr-bar i { display: block; height: 100%; background: var(--carolina); border-radius: 3px; }
+.sr-n { font: 800 20px/1 var(--num); font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; }

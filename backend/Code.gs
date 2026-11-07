@@ -27,6 +27,15 @@ const TABS = {
   // The public roster additions: every approved appeal lands here (and Neal can add rows by hand).
   // tier = plankton, clever, schooler, rare, deep or krillion; year = 2024 or 2022/2023.
   roster: ["name", "tier", "year", "addedAt", "source"],
+  // Footer music: one row per song, counting plays of a minute or more (anyone, no account).
+  listens: ["song", "title", "listens", "updated"],
+};
+// The footer playlist (music.js MUSIC). Only these ids can be counted; titles come from here, never the client.
+const SONGS = {
+  "K4Fk9Clc12w": "Shotput (slowed + reverb)", "hb24kZ0fiEA": "Flight's Booked", "1_w9ZtbHj_E": "Link Up",
+  "nfJReXaXkTY": "Passionfruit (slowed + reverb)", "wTPWI3qkx5c": "Heat Waves (8D slowed)", "-J2rSm8K9_Y": "Babydoll",
+  "ISsxv6i9f_k": "Kiss Me More (slowed + reverb)", "y9NPx6NDA6M": "Ay No Puedo", "_9hkXCYiEjc": "No One Noticed",
+  "U8F5G5wR1mk": "tv off", "0UPDBODtxzw": "Dracula (JENNIE Remix)",
 };
 
 // Run once from the Apps Script editor (select "setup", press Run). It asks for permission,
@@ -136,7 +145,8 @@ function doGet() {
   }));
   const roster = rows_("roster").map((r) => ({ name: String(r.name).trim(), tier: String(r.tier || "").trim().toLowerCase(), year: String(r.year || "").trim() }))
     .filter((r) => r.name && r.tier && r.year);
-  return json_({ ok: true, today: today_(), now: Date.now(), plays, appeals, roster });
+  const listens = rows_("listens").filter((r) => SONGS[String(r.song)]).map((r) => ({ song: String(r.song), listens: Number(r.listens) || 0 }));
+  return json_({ ok: true, today: today_(), now: Date.now(), plays, appeals, roster, listens });
 }
 
 // POST (text/plain body with JSON): {action, ...}
@@ -146,6 +156,25 @@ function doPost(e) {
   try {
     let b;
     try { b = JSON.parse((e && e.postData && e.postData.contents) || "{}"); } catch (err) { return json_({ ok: false, error: "bad request" }); }
+
+    // Music: one listen = a minute or more of one song. Anonymous. A browser (client id) can count a
+    // given song at most once every 50 seconds, and the whole site at most 200 listens a minute.
+    if (b.action === "listen") {
+      const song = String(b.song || "");
+      if (!Object.prototype.hasOwnProperty.call(SONGS, song)) return json_({ ok: false, error: "unknown song" });
+      const client = String(b.client || "").replace(/[^a-z0-9]/gi, "").slice(0, 32) || "anon";
+      const cache = CacheService.getScriptCache(), key = "listen:" + song + ":" + client, minute = "listens" + Utilities.formatDate(new Date(), ZONE, "yyyyMMddHHmm");
+      if (cache.get(key)) return json_({ ok: true, counted: false });
+      const n = Number(cache.get(minute) || 0);
+      if (n >= 200) return json_({ ok: true, counted: false });
+      cache.put(key, "1", 50); cache.put(minute, String(n + 1), 120);
+      const sh = sheet_("listens"), last = sh.getLastRow();
+      const ids = last > 1 ? sh.getRange(2, 1, last - 1, 1).getValues().map((r) => String(r[0])) : [];
+      const i = ids.indexOf(song);
+      if (i < 0) sh.appendRow([cell_(song), cell_(SONGS[song]), 1, new Date()]);
+      else { const c = sh.getRange(i + 2, 3); c.setValue((Number(c.getValue()) || 0) + 1); sh.getRange(i + 2, 4).setValue(new Date()); }
+      return json_({ ok: true, counted: true });
+    }
 
     // Admin: check the password, or rank one appeal. Five wrong guesses a minute locks it briefly.
     if (b.action === "login" || b.action === "rank") {

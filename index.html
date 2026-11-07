@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="bh-version" content="55">
+<meta name="bh-version" content="56">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Batchillion</title>
 <meta name="description" content="The daily BatCH huck: name one teammate per class. The rarer the pick, the deeper the huck.">
@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@700;800;900&family=Bitter:ital,wght@1,700;1,800&family=Saira+Extra+Condensed:wght@700;800&family=Barlow:wght@400;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=55">
+<link rel="stylesheet" href="style.css?v=56">
 </head>
 <body>
 <!-- one dogwood (NC state flower) drawing, reused for the header flower and the corner flowers -->
@@ -89,6 +89,7 @@
       <button type="button" class="tb tb-play" id="pbPlay" aria-label="Play"><svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
       <button type="button" class="tb" id="pbNext" aria-label="Next song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
       <button type="button" class="tb tb-loop" id="pbLoop" aria-label="Loop this song" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2z"/></svg></button>
+      <button type="button" class="tb" id="pbRank" aria-label="most played songs" title="most played songs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16v-2H4zM5 16h3V9H5zm5.5 0h3V4h-3zM16 16h3v-5h-3z"/></svg></button>
     </div>
   </div>
   <span id="dayNum"></span>
@@ -113,6 +114,12 @@
   <form method="dialog" class="dlg-foot"><button class="btn">got it</button></form>
 </dialog>
 
+<dialog id="songs" class="dlg" aria-labelledby="songsTitle">
+  <div class="dlg-head how-head"><div><p class="kicker">BATCHILLION RADIO</p><h2 id="songsTitle" tabindex="-1" autofocus>Most played</h2></div><svg class="dlg-flower" aria-hidden="true" focusable="false"><use href="#dogwood"/></svg></div>
+  <div class="dlg-body"><p class="hint songs-note">1 listen = a minute or more of a song, from everyone who plays. Tap a song to play it.</p><div id="songsBody"></div></div>
+  <form method="dialog" class="dlg-foot"><button class="btn">close</button></form>
+</dialog>
+
 <dialog id="board" class="dlg" aria-labelledby="boardTitle">
   <div class="dlg-head how-head"><div><p class="kicker" id="boardSub"></p><h2 id="boardTitle" tabindex="-1" autofocus>Leaderboard</h2></div><svg class="dlg-flower" aria-hidden="true" focusable="false"><use href="#dogwood"/></svg></div>
   <div class="row tabs dlg-tabs" id="boardTabs"></div>
@@ -124,9 +131,9 @@
 <div id="ythost" aria-hidden="true"></div>
 
 
-<script src="roster.js?v=55"></script>
-<script src="app.js?v=55"></script>
-<script src="music.js?v=55"></script>
+<script src="roster.js?v=56"></script>
+<script src="app.js?v=56"></script>
+<script src="music.js?v=56"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
