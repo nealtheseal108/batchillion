@@ -287,6 +287,11 @@
   // "retired" only hides a sheet from the picker; it still scores and keeps its leaderboard.
   const spends = (set) => (set || "classes") === "classes";
   const oncePerRound = (set) => !spends(set) && !setOf(set).legacyReuse;
+  // Live stat sheets: only a player's first finished round on each sheet counts on its leaderboard; replays
+  // are practice (the questions don't change and the answer explanations show the ranking).
+  const firstOnly = (set) => oncePerRound(set);
+  const isDone = (r) => r.done || r.answers.length >= P.length;
+  const firstRowOf = (player, set) => { const r = history(player).rounds.filter((x) => (x.set || "classes") === set && isDone(x)).sort((a, b) => a.row - b.row)[0]; return r ? r.row : null; };
   function scoreRound(answers, used, set, date = dayKey) {
     const inRound = new Set();
     return (Array.isArray(answers) ? answers.slice(0, P.length) : []).map((a, k) => {
@@ -479,7 +484,7 @@
         <p class="kicker">BATCHILLION #${dayNum()}${practice ? " · PRACTICE" : ""}${st ? ` · STREAK ${st}` : ""}</p>
         <p class="prompt">You're up, <em>${esc(me.player)}</em>. Pick a round. The rarer the pick, the deeper the huck.</p>
         <p class="hint">${today.rounds.length ? `Today: ${today.rounds.length} round${today.rounds.length > 1 ? "s" : ""}, ${today.yards} yards. ` : ""}Players: ${left ? `${left} teammate${left > 1 ? "s" : ""} left for you; a name you use there is gone for good.` : "you've used every teammate."} Stat sheets: any name, once per round.</p>
-        <div class="picks">${openRounds().map((r, i) => `<button class="btn pick${i ? " ghost" : ""}" data-set="${r.id}" type="button" ${spends(r.id) && !left ? "disabled" : ""}><span>${esc(r.title)}${r.unlock ? ' <b class="new">new</b>' : ""}</span><small>${spends(r.id) ? "names are gone for good" : "a name counts once per round"}</small><small>max ${maxFor(r.id, h.used)} yds</small></button>`).join("")}</div>
+        <div class="picks">${openRounds().map((r, i) => `<button class="btn pick${i ? " ghost" : ""}" data-set="${r.id}" type="button" ${spends(r.id) && !left ? "disabled" : ""}><span>${esc(r.title)}${r.unlock ? ' <b class="new">new</b>' : ""}</span><small>${spends(r.id) ? "names are gone for good" : "a name counts once per round"}</small><small>max ${maxFor(r.id, h.used)} yds${firstOnly(r.id) && firstRowOf(me.player, r.id) ? " · replays are practice" : ""}</small></button>`).join("")}</div>
         <div class="row"><button class="linkish" id="out" type="button">not ${esc(me.player)}? sign out</button></div>
       </div>`);
     const first = stage.querySelector("[data-set]"); if (first) first.focus();
@@ -555,9 +560,11 @@
     const missKey = () => `${clockKey()}:misses:${row}:${i}`;
     let misses = practice ? 0 : ls.get(missKey(), 0);
     const left = people.filter((p) => fits(PR[i], p) && !used.has(p.key)).length;
+    const firstRow = !practice && firstOnly(set) ? firstRowOf(me.player, set) : null;
+    const replayRound = firstRow != null && firstRow !== row;
     show(`
       <div class="card">
-        <p class="kicker">${spends(set) ? `PROMPT ${i + 1} / ${PR.length} · ${left} LEFT FOR YOU` : `${esc(R.title.toUpperCase())} · PROMPT ${i + 1} / ${PR.length} · ONE USE PER NAME`}</p>
+        <p class="kicker">${spends(set) ? `PROMPT ${i + 1} / ${PR.length} · ${left} LEFT FOR YOU` : `${esc(R.title.toUpperCase())}${replayRound ? " · PRACTICE" : ""} · PROMPT ${i + 1} / ${PR.length} · ONE USE PER NAME`}</p>
         <p class="prompt">Name a BatCH teammate <em>${esc(PR[i].text)}</em></p>
         <div class="clock" id="clk"><span class="secs" id="secs">${LIMIT}</span><div class="timer" id="tm"><i></i></div></div>
         <form class="row" id="f" autocomplete="off">
@@ -766,9 +773,13 @@
     Object.values(names).forEach((name) => {
       const h = history(name);
       let nToday = 0;
-      h.rounds.forEach((r) => {
+      const seen = {};
+      h.rounds.slice().sort((a, b) => a.row - b.row).forEach((r) => {
         const isToday = r.date === dayKey; if (isToday) nToday++;
-        if (r.done || r.answers.length >= P.length) list.push({ name, row: r.row, set: r.set || "classes", yards: sum(r.results), date: r.date, isToday, nth: isToday ? nToday : 0 });
+        if (!(r.done || r.answers.length >= P.length)) return;
+        const set = r.set || "classes", practiceRound = firstOnly(set) && seen[set];
+        seen[set] = true;
+        list.push({ name, row: r.row, set, yards: sum(r.results), date: r.date, isToday, nth: isToday ? nToday : 0, practice: !!practiceRound });
       });
     });
     return list;
@@ -780,7 +791,7 @@
     const W = 320, H = 92, X = (v) => 10 + (Math.min(700, Math.max(0, v)) / 700) * (W - 20);
     let pool = [], scope = "today's";
     if (!practice && round.row) {
-      const mine = allRounds().filter((r) => r.set === (round.set || "classes"));
+      const mine = allRounds().filter((r) => r.set === (round.set || "classes") && (!r.practice || (r.row === round.row && norm(r.name) === norm(me.player))));
       pool = mine.filter((r) => r.isToday);
       if (pool.length < 3) { pool = mine; scope = "all-time"; }
     }
@@ -803,7 +814,9 @@
     const ticks = [0, 100, 200, 300, 400, 500, 600, 700].map((v) => `<line class="sc-tick" x1="${X(v)}" x2="${X(v)}" y1="${H - 14}" y2="${H - 10}"/><text class="sc-tl" x="${X(v)}" y="${H - 1}">${v}</text>`).join("");
     const you = `<line class="sc-you" x1="${X(tot)}" x2="${X(tot)}" y1="10" y2="${H - 14}"/><circle class="sc-you-dot" cx="${X(tot)}" cy="10" r="3.5"/><text class="sc-you-t" x="${X(tot)}" y="7" text-anchor="${tot > 620 ? "end" : tot < 80 ? "start" : "middle"}">YOU</text>`;
     const place = others.filter((r) => r.yards > tot).length + 1, nth_ = (n) => n + (["th", "st", "nd", "rd"][(n % 100 >> 3 ^ 1) && n % 10] || "th");
-    const rank = pct == null ? (practice ? "practice round" : `first ${esc(R.title)} round on the board`)
+    const replay = !practice && round.row && firstOnly(round.set || "classes") && firstRowOf(me.player, round.set || "classes") !== round.row;
+    const rank = replay ? `practice round: only your first ${esc(R.title)} round counts on the leaderboard`
+      : pct == null ? (practice ? "practice round" : `first ${esc(R.title)} round on the board`)
       : others.length < 9 ? `${nth_(place)} of ${others.length + 1} ${scope} ${esc(R.title)} rounds`
       : `longer than ${pct}% of ${scope} ${esc(R.title)} rounds`;
     // Huck log: 7 lanes on a mini field; a throw flies up its lane as far as its points (100 = the end zone).
@@ -907,7 +920,7 @@
     }
     buildRoster();
     // One row per finished round (not per player): best single rounds win. Today = rounds thrown today.
-    let list = allRounds().filter((r) => r.set === set);
+    let list = allRounds().filter((r) => r.set === set && !r.practice);
     if (view === "today") list = list.filter((r) => r.isToday);
     list.sort((a, b) => b.yards - a.yards || a.name.localeCompare(b.name));
     list = list.slice(0, 50);
