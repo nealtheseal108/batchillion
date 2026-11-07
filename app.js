@@ -13,11 +13,17 @@
   const yearsOf = (y) => (Array.isArray(y) ? y : String(y || "").split(/[\/, ]+/).map(Number).filter(Boolean));
   // Round types: "classes" asks by starting year; stat rounds list each prompt's answers with their own tiers.
   const ROUNDS = (window.ROUNDS || [{ id: "classes", title: "Players", prompts: P }]).map((r) => ({
-    ...r, prompts: r.prompts.map((q) => ({ ...q, tierOf: q.tiers ? Object.fromEntries(Object.entries(q.tiers).map(([n, t]) => [norm(n), t])) : null })),
+    ...r, prompts: r.prompts.map((q) => ({ ...q, tierOf: q.tiers ? Object.fromEntries(Object.entries(q.tiers).map(([n, t]) => [norm(n), t])) : null,
+      obOf: q.ob ? Object.fromEntries(Object.entries(q.ob).map(([n, v]) => [norm(n), v])) : null })),
   }));
   const setOf = (id) => ROUNDS.find((r) => r.id === id) || ROUNDS[0];
   const fits = (q, p) => (q.tierOf ? !!q.tierOf[p.key] : p.years.some(q.test));
-  const tierFor = (q, p) => (q.tierOf ? q.tierOf[p.key] : p.tier);   // stat prompts set their own tiers
+  // Stat prompts set their own tiers (blended with what players typed, once there's enough of it: crowdTiers).
+  const tierFor = (q, p, set, k, date) => {
+    if (!q.tierOf) return p.tier;
+    const c = set && date ? crowdTiers(set, date) : null;
+    return (c && c[k] && c[k][p.key]) || q.tierOf[p.key];
+  };
   const ls = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
@@ -199,24 +205,88 @@
   }
   const byValue = (x, y) => T[x.tier].pts - T[y.tier].pts || x.full.localeCompare(y.full);
 
+  // ---------- crowd tiers ----------
+  // Stat tiers start from the stats (q.ob: each answer's stat ranking; tiers capped by playing time). Once a stat sheet has had a day with 12+ different players, what people actually typed is blended in
+  // half and half: a name few people think of drifts rarer, one everybody types drifts toward plankton.
+  // A round played on day D only uses answers from days before D, so scores never move during a day and a
+  // round keeps its score for good. Same tier rules as the stat sheets (ties share; one in a batchillion only
+  // for a single lowest; at most 2 deep cuts; top quarter schooler) and the same fame cap.
+  const CROWD_MIN_PLAYERS = 12, CROWD_W = 0.5, ORDER = ["plankton", "schooler", "rare", "deep", "krillion"];
+  function tierize(vals) {
+    const keys = Object.keys(vals), levels = [...new Set(keys.map((n) => vals[n]))].sort((a, b) => b - a);
+    const groups = levels.map((v) => keys.filter((n) => vals[n] === v)), out = {};
+    if (!groups.length) return out;
+    groups[0].forEach((n) => (out[n] = "plankton"));
+    if (groups.length === 1) return out;
+    let lo = groups.length - 1;
+    if (groups[lo].length === 1) {
+      out[groups[lo][0]] = "krillion"; lo--;
+      if (lo >= 1 && groups[lo].length <= 2) { groups[lo].forEach((n) => (out[n] = "deep")); lo--; }
+    } else if (groups[lo].length <= 2) { groups[lo].forEach((n) => (out[n] = "deep")); lo--; }
+    if (lo === groups.length - 1 && lo >= 1) { groups[lo].forEach((n) => (out[n] = "rare")); lo--; }
+    const mid = groups.slice(1, lo + 1);
+    const count = mid.reduce((a, g) => a + g.length, 0) + Object.values(out).filter((t) => t === "rare" || t === "deep" || t === "krillion").length;
+    const x = count * 0.25, target = Math.abs(x - Math.trunc(x) - 0.5) < 1e-9 ? 2 * Math.round(x / 2) : Math.round(x);   // Python's round()
+    let seen = 0;
+    mid.forEach((g) => { const t = seen + g.length <= Math.max(target, 1) ? "schooler" : "rare"; g.forEach((n) => (out[n] = t)); seen += g.length; });
+    return out;
+  }
+  // Playing-time fame cap (roster.js PT_CAP, from points played per game vs that game's average).
+  const PT_CAP = Object.fromEntries(Object.entries(window.PT_CAP || {}).map(([n, c]) => [norm(n), c]));
+  const capOf = (key) => PT_CAP[key] || "rare";
+  function capTiers(tm, ob) {
+    const out = {};
+    Object.entries(tm).forEach(([n, t]) => { const c = capOf(n); out[n] = ORDER.indexOf(t) >= ORDER.indexOf(c) ? t : c; });
+    if (!Object.values(out).includes("plankton")) {
+      const ok = Object.keys(out).filter((n) => out[n] === "schooler" && capOf(n) === "plankton");
+      if (ok.length) { const top = Math.max(...ok.map((n) => ob[n])); ok.forEach((n) => { if (ob[n] === top) out[n] = "plankton"; }); }
+    }
+    return out;
+  }
+  const crowdCache = new Map();
+  function crowdTiers(set, date) {
+    const R = setOf(set);
+    if (!R || !R.prompts.some((q) => q.obOf)) return null;
+    const key = `${set}|${date}|${remote.plays.length}|${people.length}`;
+    if (crowdCache.has(key)) return crowdCache.get(key);
+    const before = remote.plays.filter((pl) => (pl.set || "classes") === set && pl.answers.length >= R.prompts.length && dayIndex(pl.date) < dayIndex(date));
+    const byDay = {};
+    before.forEach((pl) => { (byDay[pl.date] = byDay[pl.date] || new Set()).add(norm(pl.player)); });
+    const rounds = before.filter((pl) => byDay[pl.date].size >= CROWD_MIN_PLAYERS);
+    let out = null;
+    if (rounds.length) {
+      out = R.prompts.map((q, k) => {
+        if (!q.obOf) return null;
+        const hits = {};
+        rounds.forEach((pl) => { const a = pl.answers[k], p = a && exactOf(a.full || a.typed); if (p && q.tierOf[p.key]) hits[p.key] = (hits[p.key] || 0) + 1; });
+        const top = Math.max(1, ...Object.values(hits));
+        const vals = {};
+        Object.keys(q.obOf).forEach((n) => { vals[n] = Math.round(((1 - CROWD_W) * q.obOf[n] + CROWD_W * ((hits[n] || 0) / top)) * 1000) / 1000; });
+        return capTiers(tierize(vals), vals);
+      });
+    }
+    crowdCache.set(key, out);
+    return out;
+  }
+
   // ---------- scoring ----------
   // One answer against today's roster (so ranked appeals apply retroactively).
-  function score(ans, k, set) {
+  function score(ans, k, set, date = dayKey) {
     const prompt = setOf(set).prompts[k];
     if (!prompt || !ans || typeof ans !== "object") return { pts: 0, status: "no answer" };
     const p = exactOf(ans.full || ans.typed);
     if (!p) return { pts: 0, status: ans.reused ? `${ans.reused} was already used` : ans.typed ? "not on the list" : "no answer" };
     if (!fits(prompt, p)) return { pts: 0, person: p, status: prompt.tierOf ? `doesn't fit "${prompt.short}"` : `wrong class: started ${p.years.join(" or ")}` };
-    const tier = tierFor(prompt, p);
+    const tier = tierFor(prompt, p, set, k, date);
     return { pts: T[tier].pts, tier, person: p };
   }
   // A round scored against everyone the player had already used. A teammate counts once per
   // player, ever, even when an appeal makes an old answer valid later.
   // Only Players rounds spend names. Stat sheets let you name anyone again, so they skip the check.
   const spends = (set) => (set || "classes") === "classes";
-  function scoreRound(answers, used, set) {
+  function scoreRound(answers, used, set, date = dayKey) {
     return (Array.isArray(answers) ? answers.slice(0, P.length) : []).map((a, k) => {
-      const r = score(a, k, set);
+      const r = score(a, k, set, date);
       if (!r.person || !spends(set)) return r;   // stat sheets: any name, any number of times
       if (used.has(r.person.key)) return { pts: 0, person: r.person, status: `${r.person.full} was already used` };
       used.add(r.person.key);
@@ -229,7 +299,7 @@
   const playsOf = (player) => remote.plays.filter((pl) => norm(pl.player) === norm(player) && pl.answers.length).sort((a, b) => a.row - b.row);
   function history(player) {
     const used = new Set(), rounds = [];
-    playsOf(player).forEach((pl) => { const before = new Set(used); rounds.push({ row: pl.row, set: pl.set, date: pl.date, done: pl.done, answers: pl.answers, before, results: scoreRound(pl.answers, used, pl.set) }); });
+    playsOf(player).forEach((pl) => { const before = new Set(used); rounds.push({ row: pl.row, set: pl.set, date: pl.date, done: pl.done, answers: pl.answers, before, results: scoreRound(pl.answers, used, pl.set, pl.date) }); });
     return { used, rounds };
   }
   // Teammates used before a given round: every earlier round, nothing from this one.
@@ -411,7 +481,7 @@
   // (names can repeat); Players needs 7 different unused teammates, so it searches the best distinct picks.
   // Keeping each prompt's top 7 candidates is exact: 6 other prompts can take at most 6 of them.
   function maxFor(id, used) {
-    const R = setOf(id), pts = (q, p) => T[tierFor(q, p)].pts;
+    const R = setOf(id), pts = (q, p) => T[tierFor(q, p, id, R.prompts.indexOf(q), dayKey)].pts;
     const C = R.prompts.map((q) => people.filter((p) => fits(q, p) && (!spends(id) || !used.has(p.key))).sort((a, b) => pts(q, b) - pts(q, a)).slice(0, 7));
     if (!spends(id)) return C.reduce((s, c, k) => s + (c.length ? pts(R.prompts[k], c[0]) : 0), 0);
     const top = C.map((c, k) => (c.length ? pts(R.prompts[k], c[0]) : 0));
