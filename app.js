@@ -1,5 +1,6 @@
 (() => {
-  const SECONDS = 30;
+  const FAST = !!window.BH_FAST;            // test switch for the fuzz bot: instant throws, short clock
+  const SECONDS = FAST ? 3 : 30;
   const ZONE = "America/New_York"; // the day flips at midnight Eastern for everyone
   const $ = (s) => document.querySelector(s);
   const stage = $("#stage");
@@ -258,6 +259,7 @@
   }
   const ease = (k) => 1 - (1 - k) ** 3;
   const animate = (ms, fn) => new Promise((done) => {
+    if (FAST) ms = 1;
     const t0 = performance.now();
     (function step(t) { const k = Math.min(1, (t - t0) / ms); fn(ease(k)); if (k < 1) requestAnimationFrame(step); else done(); })(t0);
   });
