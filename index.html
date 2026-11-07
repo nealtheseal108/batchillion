@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BatCH Hucks · the daily huck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>BATCH HUCKS</h1>
+    <p class="sub">the daily huck · 7 prompts · 25 seconds each · rarer teammates fly farther</p>
+  </div>
+  <div class="tally"><span class="tally-label">YARDS</span><span id="total">0</span></div>
+</header>
+
+<section class="field-wrap" aria-label="the field">
+  <svg id="field" viewBox="0 0 1200 300" preserveAspectRatio="none" role="img" aria-label="ultimate field, own end zone left, far end zone right">
+    <defs>
+      <pattern id="turf" width="60" height="300" patternUnits="userSpaceOnUse">
+        <rect width="30" height="300" fill="var(--turf-a)"/><rect x="30" width="30" height="300" fill="var(--turf-b)"/>
+      </pattern>
+    </defs>
+    <rect x="0" y="0" width="1200" height="300" fill="url(#turf)"/>
+    <rect x="0" y="0" width="100" height="300" fill="var(--ez)"/>
+    <rect x="1100" y="0" width="100" height="300" fill="var(--ez-far)"/>
+    <g id="lines"></g>
+    <text x="1150" y="160" class="ez-label" text-anchor="middle" transform="rotate(90 1150 160)">ONE IN A KRILLION</text>
+    <g id="trails"></g>
+    <circle id="disc" cx="100" cy="150" r="13" />
+  </svg>
+</section>
+
+<main id="stage" class="stage"></main>
+
+<footer class="foot">
+  <button class="linkish" id="howBtn" type="button">how to play</button>
+  <span id="dayNum"></span>
+</footer>
+
+<dialog id="how">
+  <h2>HOW TO PLAY</h2>
+  <ol>
+    <li>7 prompts a day. Same for everyone.</li>
+    <li>Each one asks for a BatCH teammate from a starting class. The last is a wildcard: anyone ever.</li>
+    <li>25 seconds to name one. First name is enough unless two people share it.</li>
+    <li>Rare teammates fly farther. Points are yards. 100 is the end zone.</li>
+    <li>Someone missing? Hit appeal. Neal ranks them and your score updates.</li>
+    <li>One huck session per day.</li>
+  </ol>
+  <div id="legend" class="legend"></div>
+  <form method="dialog"><button class="btn">got it</button></form>
+</dialog>
+
+<script src="roster.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
