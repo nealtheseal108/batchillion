@@ -226,11 +226,12 @@ input:focus { box-shadow: 0 0 0 3px var(--carolina); }
 
 /* ---------- footer, dialog, toast ---------- */
 .foot { max-width: 1100px; width: 100%; margin: 0 auto 22px; padding-top: 22px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--graphite); font-size: 14px; }
-.foot::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 12px; background: var(--stripes); }
 .foot > span { background: var(--white); border-radius: 8px; padding: 6px 12px 5px; box-shadow: inset 0 0 0 2px var(--navy), 0 0 0 3px var(--ground); }   /* woven kit tags */
 #dayNum { font: 800 18px/1.2 var(--num); letter-spacing: .2em; color: var(--navy); }
 .linkish { background: none; border: 0; color: var(--navy); font: 700 15px var(--text); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; text-decoration-color: var(--carolina); padding: 0; }
 .linkish:hover { text-decoration-color: var(--navy); }
+.foot .linkish { text-decoration: none; }   /* footer links sit in the kit tag, no underline */
+.foot .linkish:hover { color: var(--carolina-ink, var(--navy)); opacity: .75; }
 dialog {
   background: var(--white); color: var(--navy); border: 5px solid var(--navy); border-radius: 18px;
   box-shadow: inset 0 0 0 2px var(--white), inset 0 0 0 4px var(--carolina);
@@ -264,7 +265,6 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
   #goals { font-size: 12px; letter-spacing: .06em; white-space: nowrap; }
   .sub { display: none; }
   /* body */
-  .foot::before { height: 9px; background: linear-gradient(var(--navy) 0 3px, transparent 3px 6px, var(--navy) 6px 9px); }
   .field-wrap { margin-top: 18px; border-width: 3px; padding: 3px; border-radius: 10px; box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--navy); }
   #field { border-radius: 6px; }
   .stage { margin: 20px auto 22px; }
