@@ -549,6 +549,12 @@
     const LIMIT = SECONDS;   // 30s for every round type
     const deadline = clock.t0 + LIMIT * 1000;
     let locked = false, lastReject = "";
+    // Stat sheets: a few guesses per prompt, more when fewer answers fit (a harder question):
+    // 12 or fewer answers -> 5 guesses, 13-17 -> 4, 18+ -> 3. Players rounds keep unlimited tries.
+    const nFit = PR[i].tierOf ? Object.keys(PR[i].tierOf).length : 0;
+    const GUESSES = spends(set) ? Infinity : nFit <= 12 ? 5 : nFit <= 17 ? 4 : 3;
+    const missKey = () => `${clockKey()}:misses:${row}:${i}`;
+    let misses = practice ? 0 : ls.get(missKey(), 0);
     const left = people.filter((p) => fits(PR[i], p) && !used.has(p.key)).length;
     show(`
       <div class="card">
@@ -560,6 +566,7 @@
           <button class="btn" type="submit">huck it</button>
         </form>
         <div class="hint" id="hint" aria-live="polite"></div>
+        ${GUESSES < Infinity ? `<p class="guesses" id="gl">${GUESSES - misses} of ${GUESSES} guesses left</p>` : ""}
       </div>`);
     const input = $("#in"), hint = $("#hint");
     if (!left) hint.textContent = "nobody left in this class for you. try a name you know is missing (you can appeal it), or wait for the buzzer.";
@@ -580,7 +587,14 @@
 
     // Enter either catches or it doesn't. A miss clears the box and the clock keeps running;
     // only a catch (or the buzzer) ends the prompt.
-    function drop(msg) { input.value = ""; hint.textContent = msg; input.focus(); }
+    function drop(msg) {
+      input.value = ""; hint.textContent = msg; input.focus();
+      if (GUESSES === Infinity) return;
+      misses++; if (!practice) ls.set(missKey(), misses);
+      const gl = $("#gl"); if (gl) gl.textContent = `${Math.max(0, GUESSES - misses)} of ${GUESSES} guesses left`;
+      if (misses >= GUESSES) { hint.textContent = `${msg} · out of guesses`; submit(true); }
+    }
+    if (misses >= GUESSES) setTimeout(() => submit(true), 0);   // reloaded after using every guess
     function submit(timedOut) {
       if (locked) return;
       const raw = input.value.trim(), ex = exactOf(raw);
