@@ -382,3 +382,26 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
 .dlg-flower { flex: none; width: 84px; height: 84px; color: var(--navy); --petal: var(--white); transform: rotate(-12deg); overflow: visible; }
 @media (max-width: 520px) { .dlg-flower { width: 66px; height: 66px; } }
 @media (max-height: 700px) { .dlg-flower { width: 56px; height: 56px; } }
+
+/* short windows (a laptop with the browser not maximized): tighten everything a step so the game card
+   keeps its padding and fits, instead of scrolling inside itself */
+@media (max-height: 620px) {
+  .field-wrap { width: min(100%, calc(26dvh * 4 + 18px)); }
+  .stage { margin: 10px auto 8px; }
+  .card { padding: 16px 22px; }
+  .card.result { padding-top: 24px; }
+  .card.result::before { height: 14px; background: linear-gradient(var(--c) 0 5px, transparent 5px 8px, var(--c) 8px 13px); }
+  .kicker { margin-bottom: 4px; }
+  .prompt { font-size: 22px; margin-bottom: 10px; }
+  .clock { margin-bottom: 10px; }
+  .secs { font-size: 38px; }
+  .timer { height: 14px; }
+  input[type=text], input[type=password] { padding: 9px 13px; font-size: 17px; }
+  .btn { padding: 11px 18px 10px; font-size: 17px; }
+  .hint { margin-top: 6px; min-height: 0; }
+  .result .who { font-size: 24px; margin-bottom: 4px; }
+  .result .yds { font-size: 46px; margin: 6px 0 2px; }
+  .result .cap { margin-bottom: 8px; font-size: 16px; }
+  .legend { margin-top: 10px; padding-top: 12px; gap: 4px 14px; grid-template-columns: repeat(3, 1fr); }
+  .foot { margin-bottom: 10px; }
+}

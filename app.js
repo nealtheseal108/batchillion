@@ -670,5 +670,18 @@
     dayKey = etKey(); paintDay(); home();
   }, 60000);
 
+  // GitHub Pages lets browsers keep an old copy of the page for ~10 minutes after a deploy, which mixes
+  // old and new files. If the live page is newer than this one, reload once to pick it up.
+  (async () => {
+    const mine = document.querySelector('meta[name="bh-version"]')?.content;
+    if (!mine || location.protocol === "file:") return;
+    try {
+      const html = await (await fetch(location.pathname + "?nc=" + Date.now(), { cache: "no-store" })).text();
+      const live = (html.match(/name="bh-version" content="([^"]+)"/) || [])[1];
+      const key = "bh:reloaded:" + live;
+      if (live && live !== mine && !sessionStorage.getItem(key)) { sessionStorage.setItem(key, "1"); location.reload(); }
+    } catch {}
+  })();
+
   home();
 })();
