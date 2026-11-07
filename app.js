@@ -428,14 +428,15 @@
     // The clock lives in storage, so reloading mid-prompt does not buy a fresh 30 seconds.
     let clock = practice ? null : ls.get(clockKey(), null);
     if (!clock || clock.i !== i || clock.row !== row) { clock = { row, i, t0: Date.now() }; if (!practice) ls.set(clockKey(), clock); }
-    const deadline = clock.t0 + SECONDS * 1000;
+    const LIMIT = spends(set) ? SECONDS : FAST ? 2 : 20;   // Players 30s, stat sheets 20s
+    const deadline = clock.t0 + LIMIT * 1000;
     let locked = false, lastReject = "";
     const left = people.filter((p) => fits(PR[i], p) && !used.has(p.key)).length;
     show(`
       <div class="card">
         <p class="kicker">${spends(set) ? `PROMPT ${i + 1} / ${PR.length} · ${left} LEFT FOR YOU` : `${esc(R.title.toUpperCase())} · PROMPT ${i + 1} / ${PR.length} · REUSE ANY NAME`}</p>
         <p class="prompt">Name a BatCH teammate <em>${esc(PR[i].text)}</em></p>
-        <div class="clock" id="clk"><span class="secs" id="secs">${SECONDS}</span><div class="timer" id="tm"><i></i></div></div>
+        <div class="clock" id="clk"><span class="secs" id="secs">${LIMIT}</span><div class="timer" id="tm"><i></i></div></div>
         <form class="row" id="f" autocomplete="off">
           <input type="text" id="in" placeholder="name…" aria-label="teammate name" autocapitalize="words" autocorrect="off" spellcheck="false" maxlength="60">
           <button class="btn" type="submit">huck it</button>
@@ -451,7 +452,7 @@
     function tick() {
       const bar = $("#tm i"); if (!bar) return stopTimer();
       const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-      bar.style.width = `${(left / SECONDS) * 100}%`;
+      bar.style.width = `${(left / LIMIT) * 100}%`;
       $("#secs").textContent = left;
       $("#clk").classList.toggle("low", left <= 5);
       if (left <= 0) submit(true);
