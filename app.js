@@ -565,6 +565,7 @@
           <button class="btn" type="submit">huck it</button>
         </form>
         <div class="hint" id="hint" aria-live="polite"></div>
+        ${spends(set) ? `<p class="guesses">started before 2024? only teammates who played a sanctioned tournament count</p>` : ""}
         ${GUESSES < Infinity ? `<p class="guesses" id="gl">${GUESSES - misses} of ${GUESSES} guesses left</p>` : ""}
       </div>`);
     const input = $("#in"), hint = $("#hint");
