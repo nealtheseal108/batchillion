@@ -181,6 +181,18 @@
     if (!q) return [];
     const first = multi ? [] : people.filter((p) => p.first === q);
     if (first.length) return first;
+    // Full names for teammates the roster lists by a first name ("Mitchell"), a last name ("Krause"),
+    // or a first name plus an initial ("Ryan B"); and "D Wu" or a bare last name like "Mateer".
+    const words = q.split(" "), qf = words[0], ql = words[words.length - 1];
+    const fuller = people.filter((p) => {
+      const pw = p.key.split(" "), pf = pw[0], pl = pw[pw.length - 1];
+      if (multi && pw.length === 1) return p.key === qf || p.key === ql;                      // Mitchell O'Connor, Josh Krause
+      if (multi && pw.length > 1 && pl.length === 1) return pf === qf && ql.startsWith(pl);   // Ryan Boldin -> Ryan B
+      if (multi && pw.length > 1 && qf.length === 1) return pf.startsWith(qf) && pl === ql;   // D Wu -> Daniel Wu
+      if (!multi && pw.length > 1 && q.length >= 3) return pl === q;                          // Mateer -> Brian Mateer
+      return false;
+    });
+    if (fuller.length) return fuller;
     if (q.length < 4) return [];
     return people.filter((p) => lev(q, p.key) <= 1 || (!multi && p.first.length >= 4 && lev(q, p.first) <= 1));
   }
@@ -548,7 +560,7 @@
     [151, "do you even come to practice?"],
     [0, "get in mitchell's car on the way to tournaments"],
   ];
-  const SQUARES = { plankton: "⬜", clever: "🟫", schooler: "🟦", rare: "🟥", deep: "🟪", krillion: "🟨" };
+  const SQUARES = { debris: "🟤", plankton: "⬜", clever: "🟫", schooler: "🟦", rare: "🟥", deep: "🟪", krillion: "🟨" };
 
   function finish(row, practiceAnswers = null, practiceSet = "classes") {
     const h = practiceAnswers ? null : history(me.player);

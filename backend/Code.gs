@@ -15,7 +15,7 @@
  *
  * Ranking an appeal: open the site, click "leaderboard" then "admin", sign in with ADMIN_KEY, and
  * pick a tier and start year for each appeal (or reject it). You can also type them into the
- * "appeals" tab: tier = plankton, clever, schooler, rare, deep, krillion or reject; year = 2024
+ * "appeals" tab: tier = debris, plankton, clever, schooler, rare, deep, krillion or reject; year = 2024
  * or 2022/2023. Everyone who typed that name gets the points on their next page load.
  */
 const ZONE = "America/New_York";
@@ -160,7 +160,7 @@ function doPost(e) {
       }
       if (b.action === "login") return json_({ ok: true });
       const tier = String(b.tier || "").toLowerCase();
-      if (["plankton", "clever", "schooler", "rare", "deep", "krillion", "reject"].indexOf(tier) < 0) return json_({ ok: false, error: "bad tier" });
+      if (["debris", "plankton", "clever", "schooler", "rare", "deep", "krillion", "reject"].indexOf(tier) < 0) return json_({ ok: false, error: "bad tier" });
       const year = String(b.year || "").trim();
       if (tier !== "reject" && !/^\d{4}([\/, ]+\d{4})*$/.test(year)) return json_({ ok: false, error: "year must look like 2024 or 2022/2023" });
       const sh = sheet_("appeals"), head = TABS.appeals;
@@ -247,11 +247,13 @@ function doPost(e) {
       if (rows_("appeals").some((r) => day_(r.date) === date && norm_(r.player) === norm_(player))) return json_({ ok: false, error: "one appeal per day" });
       sheet_("appeals").appendRow([text_(date), cell_(name), k, cell_(typed), "", "", new Date()]);
       try {
-        MailApp.sendEmail(Session.getEffectiveUser().getEmail(),   // the sheet owner (the script runs as them)
+        // NOTIFY_EMAIL lives in Secrets.gs (Apps Script only). The effective-user lookup can come back
+        // empty when an anonymous player files the appeal, which silently dropped these emails.
+        MailApp.sendEmail((typeof NOTIFY_EMAIL !== "undefined" && NOTIFY_EMAIL) || Session.getEffectiveUser().getEmail(),
           `Batchillion appeal: ${typed}`,
           `${name} appealed "${typed}" for prompt ${k + 1} on ${date}.\n\n` +
           `Rank it on the site (leaderboard > admin) or in the appeals tab: ${SpreadsheetApp.getActiveSpreadsheet().getUrl()}`);
-      } catch (err) { /* the appeal is saved even if the email quota is used up */ }
+      } catch (err) { PropertiesService.getScriptProperties().setProperty("LAST_MAIL_ERROR", String(err).slice(0, 300)); }   // the appeal is still saved
       return json_({ ok: true });
     }
     return json_({ ok: false, error: "unknown action" });

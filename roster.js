@@ -1,6 +1,6 @@
 // BatCH roster for the daily huck game.
 // One line per member who has played at least one tournament (BatCH Bash counts).
-// tier: plankton | clever | schooler | rare | deep | krillion
+// tier: debris (0) | plankton | clever | schooler | rare | deep | krillion
 // year: the year they started university (any school), or a list of years when either counts ([2022, 2023]).
 //   Anything 2021 or earlier lands in the "2021 or before" prompt.
 // note (optional 4th field): an extra line shown when someone guesses them.
@@ -92,6 +92,7 @@ window.ROSTER = [
 
 // Tiers: points are yards downfield. 100 = caught in the end zone.
 window.TIERS = {
+  debris:   { label: "debris",            pts: 0,   color: "#6f6257", caption: "why would you huck it into triple coverage" },
   plankton: { label: "plankton",          pts: 10,  color: "#9aa3a6", caption: "that's the farthest i've seen nate throw" },
   clever:   { label: "too clever",        pts: 15,  color: "#c07a3e", caption: "bro that is NOT smart" },
   schooler: { label: "schooler",          pts: 30,  color: "#7cc4ef", caption: "average distance of a king hammer" },
