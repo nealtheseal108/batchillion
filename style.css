@@ -336,9 +336,19 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
 .tb-play.is-on .i-pause { display: block; }
 .tb-loop.is-on { background: var(--navy); color: var(--white); }
 @media (prefers-reduced-motion: reduce) { .tunes .eq i { animation: none; } }
-/* phones: the player takes its own row above the two footer tags */
+/* short labels exist for phones only */
+.foot .sm { display: none; }
+/* phones: keep the player between the two tags, with shorter labels and just play + next */
 @media (max-width: 640px) {
-  .tunes { order: -1; flex: 1 1 100%; }
+  .foot { flex-wrap: nowrap; gap: 8px; }
+  .foot .lg { display: none; }
+  .foot .sm { display: inline; }
+  .foot > span { flex: none; }
+  .tunes { flex: 1 1 auto; gap: 6px; padding: 3px 4px 3px 8px; }
+  .tunes-artist, #pbPrev, #pbLoop { display: none; }
+  .tunes-title { font-size: 13px; }
+  .tb { width: 28px; height: 28px; }
+  .tb-play { width: 30px; height: 30px; }
 }
 
 /* ---------- modals (how to play, leaderboard): fixed head, scrolling middle, pinned foot ---------- */

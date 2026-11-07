@@ -38,7 +38,7 @@
   const FIRST = dayIndex("2026-11-6"); // Batchillion #1
   let dayKey = etKey();
   const dayNum = () => Math.max(1, dayIndex(dayKey) - FIRST + 1);
-  const paintDay = () => ($("#dayNum").textContent = `BATCHILLION #${dayNum()}`);
+  const paintDay = () => ($("#dayNum").innerHTML = `<span class="lg">BATCHILLION </span>#${dayNum()}`);   // phones show just "#N"
   paintDay();
   const practice = !API && new URLSearchParams(location.search).has("practice"); // local testing only
 
