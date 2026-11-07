@@ -214,7 +214,10 @@
   // yards (100 pts = the full 70), each throw starts where the last one was caught, and the turf
   // scrolls under the disc so the end zones never move. Every 100 points is a goal.
   const FIELD = 70, YD = 1200 / 110, G0 = 20 * YD, G1 = G0 + FIELD * YD, MID = 150;
-  const yardsFor = (pts) => (pts >= 100 ? FIELD + 10 : Math.round(pts * 0.7));
+  // One scale everywhere: every point moves the disc 0.7 yards, so 100 points is exactly the 70-yard field
+  // (caught on the far goal line). The field's line markers count in points, matching the score.
+  const PER_PT = FIELD / 100, LINE = 10 * PER_PT;            // a marker every 10 points
+  const yardsFor = (pts) => pts * PER_PT;
   const svgNS = "http://www.w3.org/2000/svg";
   const disc = $("#disc");
   let offset = 0, throws = [], lastY = MID, laneN = 0;
@@ -227,12 +230,13 @@
   function drawField() {
     let turf = "", lines = "";
     const small = matchMedia("(max-width: 520px)").matches, ly = small ? 48 : 26, room = small ? 6 : 3;
-    for (let b = Math.floor(offset / 10); b * 10 < offset + FIELD; b++) // 10-yard turf bands
-      turf += `<rect x="${xAt(b * 10)}" y="0" width="${10 * YD + 0.5}" height="300" class="${b % 2 ? "band-b" : "band-a"}"/>`;
-    for (let y = Math.ceil(offset / 10) * 10; y < offset + FIELD; y += 10) {
-      if (y === offset) continue;
-      const x = xAt(y);
-      lines += `<line x1="${x}" y1="0" x2="${x}" y2="300"/>` + (y <= offset + FIELD - room ? `<text x="${x + 6}" y="${ly}">${y}</text>` : "");
+    for (let b = Math.floor(offset / LINE - 1e-6); b * LINE < offset + FIELD; b++) // a turf band per 10 points
+      turf += `<rect x="${xAt(b * LINE)}" y="0" width="${LINE * YD + 0.5}" height="300" class="${b % 2 ? "band-b" : "band-a"}"/>`;
+    for (let n = Math.ceil(offset / LINE - 1e-6); n * LINE < offset + FIELD - 1e-6; n++) {
+      const y = n * LINE;
+      if (Math.abs(y - offset) < 1e-6) continue;
+      const x = xAt(y), label = n * 10;                     // running points at this marker
+      lines += `<line x1="${x}" y1="0" x2="${x}" y2="300"/>` + (y <= offset + FIELD - room * PER_PT * 1.4 ? `<text x="${x + 6}" y="${ly}">${label}</text>` : "");
     }
     $("#turf").innerHTML = turf;
     $("#lines").innerHTML = lines;
@@ -504,7 +508,7 @@
       <div class="card result${t ? "" : " miss"}" role="status" style="--c:${t ? t.color : "var(--graphite)"}">
         <p class="kicker">PROMPT ${all.length} / ${P.length}${goal ? " · GOAL" : ""}</p>
         <p class="who">${esc(r.person ? r.person.full : ans.typed || ans.reused || "no answer")}</p>
-        ${t ? `<span class="tier">${esc(t.label)}</span><p class="yds">${t.pts} <small>pts · ${yardsFor(t.pts) > FIELD ? "caught in the end zone" : yardsFor(t.pts) + " yds"}</small></p><p class="cap">${esc(cap)}</p>`
+        ${t ? `<span class="tier">${esc(t.label)}</span><p class="yds">${t.pts} <small>pts${t.pts >= 100 ? " · caught in the end zone" : ""}</small></p><p class="cap">${esc(cap)}</p>`
             : `<p class="yds">0 <small>pts</small></p><p class="cap">${esc(window.ZERO_CAPTION)}</p><p class="small">${esc(r.status)}${ans.typed && !r.person ? " · you can appeal one name at the end" : ""}</p>`}
         <div class="row"><button class="btn" id="next" type="button">${last ? "see your drive" : "next pull"}</button></div>
       </div>`);
