@@ -544,12 +544,12 @@
   }
 
   // ---------- recap + appeal ----------
-  const VERDICTS = [ // the day's total, on the same 0-700 scale as krillion
-    [450, "Caught in the end zone. Callahan behavior."],
-    [351, "Huck to space. The sideline is losing it."],
-    [251, "Past the brick. Real yards."],
-    [151, "Swing, swing, dump. Gets the disc moving."],
-    [0, "Turf. The disc barely left your hand."],
+  const VERDICTS = [ // the day's total, on the same 0-700 scale as krillion; lines by Neal
+    [450, "the solution to every problem is to huck it and that's what you did"],
+    [351, "easy golf"],
+    [251, "nate 'mr. consistent' scofield type performance"],
+    [151, "do you even come to practice?"],
+    [0, "get in mitchell's car on the way to tournaments"],
   ];
   const SQUARES = { plankton: "⬜", clever: "🟫", schooler: "🟦", rare: "🟥", deep: "🟪", krillion: "🟨" };
 
