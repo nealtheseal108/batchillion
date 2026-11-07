@@ -49,7 +49,7 @@
     try {
       const r = await fetch(API, { cache: "no-store" }); const j = await r.json();
       if (!j.ok) throw 0;
-      remote = { plays: Array.isArray(j.plays) ? j.plays : [], appeals: Array.isArray(j.appeals) ? j.appeals : [] };
+      remote = { plays: Array.isArray(j.plays) ? j.plays : [], appeals: Array.isArray(j.appeals) ? j.appeals : [], roster: Array.isArray(j.roster) ? j.roster : [] };
       if (typeof j.now === "number") skew = j.now - Date.now();
       if (!keepDay && j.today && j.today !== dayKey) { dayKey = j.today; paintDay(); } // the server's calendar wins
       return (online = true);
@@ -104,6 +104,12 @@
   function buildRoster() {
     const base = window.ROSTER.map(([full, tier, year, note], i) => mk({ full, tier, years: yearsOf(year), note }, i));
     people = base;
+    // The public roster tab: approved appeals and names Neal added in the Sheet.
+    (remote.roster || []).forEach((r) => {
+      const k = norm(r.name);
+      if (!k || !T[r.tier] || !yearsOf(r.year).length || people.some((p) => p.key === k)) return;
+      people.push(mk({ full: String(r.name).trim(), tier: r.tier, years: yearsOf(r.year), viaRoster: true }, people.length));
+    });
     remote.appeals.forEach((a) => {
       const k = norm(a.typed);
       if (!k || !a.tier || a.tier === "reject" || !T[a.tier] || !yearsOf(a.year).length) return;
@@ -652,7 +658,7 @@
       b.disabled = true;
       const r = await post({ action: "rank", key, typed: it.typed, tier: b.dataset.t, year });
       if (!r.ok) { b.disabled = false; if (r.error === "wrong password") sessionStorage.removeItem("bh:admin"); return toast(r.error); }
-      toast(`${it.typed} → ${b.dataset.t === "reject" ? "rejected" : T[b.dataset.t].label}`); admin();
+      toast(b.dataset.t === "reject" ? `${it.typed} rejected` : `${it.typed} → ${T[b.dataset.t].label}, added to the roster`); admin();
     }));
   }
 

@@ -118,5 +118,5 @@ window.PROMPTS = [
 // Shared backend (Google Apps Script web app, see backend/Code.gs). Paste the /exec URL here after
 // deploying. Empty = local-only mode: the game works but there is no public leaderboard,
 // no cross-device daily lock, and appeals fall back to copy-and-DM.
-window.BACKEND_URL = "";
+window.BACKEND_URL = "https://script.google.com/macros/s/AKfycbzC11Mk4p7tqF5vtPYV0s4UO85jqrhlXRX5NNaO1Hdo2CGFDybM0-vUc5E9jn2-LYLj/exec";
 window.APPEAL_WHO = "Neal";

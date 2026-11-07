@@ -24,6 +24,9 @@ const TABS = {
   plays: ["date", "player", "answers", "startedAt", "submittedAt"],
   appeals: ["date", "player", "prompt", "typed", "tier", "year", "submittedAt"],
   accounts: ["player", "salt", "hash", "token", "createdAt"],
+  // The public roster additions: every approved appeal lands here (and Neal can add rows by hand).
+  // tier = plankton, clever, schooler, rare, deep or krillion; year = 2024 or 2022/2023.
+  roster: ["name", "tier", "year", "addedAt", "source"],
 };
 
 // Run once from the Apps Script editor (select "setup", press Run). It asks for permission,
@@ -115,7 +118,9 @@ function doGet() {
     date: day_(r.date), player: String(r.player), prompt: Number(r.prompt), typed: String(r.typed),
     tier: String(r.tier || "").trim().toLowerCase(), year: String(r.year || "").trim(),
   }));
-  return json_({ ok: true, today: today_(), now: Date.now(), plays, appeals });
+  const roster = rows_("roster").map((r) => ({ name: String(r.name).trim(), tier: String(r.tier || "").trim().toLowerCase(), year: String(r.year || "").trim() }))
+    .filter((r) => r.name && r.tier && r.year);
+  return json_({ ok: true, today: today_(), now: Date.now(), plays, appeals, roster });
 }
 
 // POST (text/plain body with JSON): {action, ...}
@@ -150,7 +155,13 @@ function doPost(e) {
         sh.getRange(r._row, head.indexOf("year") + 1).setNumberFormat("@").setValue(tier === "reject" ? "" : year);
         n++;
       });
-      return json_({ ok: true, updated: n });
+      // Approved names join the public roster tab; a rejected one is taken back out.
+      const rs = sheet_("roster"), existing = rows_("roster").find((r) => norm_(r.name) === norm_(b.typed));
+      const pretty = String(b.typed || "").trim().replace(/\b\w/g, (c) => c.toUpperCase());
+      if (tier === "reject") { if (existing && existing.source === "appeal") rs.deleteRow(existing._row); }
+      else if (existing) { rs.getRange(existing._row, 2, 1, 2).setNumberFormat("@").setValues([[tier, year]]); }
+      else rs.appendRow([cell_(pretty), tier, year, new Date(), "appeal"]);
+      return json_({ ok: true, updated: n, added: tier !== "reject" });
     }
 
     // Accounts: anyone can create one; the name is first come, first served.
