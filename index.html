@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@700;800;900&family=Bitter:ital,wght@1,700;1,800&family=Saira+Extra+Condensed:wght@700;800&family=Barlow:wght@400;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
 <!-- one dogwood (NC state flower) drawing, reused for the header flower and the corner flowers -->
@@ -54,6 +54,9 @@
   </div>
 </header>
 
+<!-- Everything under the header fills exactly one screen, so the most the page can scroll is the
+     header's own height. -->
+<div class="below">
 <section class="field-wrap" aria-label="the field">
   <svg id="field" viewBox="0 0 1200 300" role="img" aria-label="ultimate field: the turf scrolls with your drive between two fixed end zones">
     <defs>
@@ -79,6 +82,7 @@
   <span><button class="linkish" id="howBtn" type="button">how to play</button> · <button class="linkish" id="boardBtn" type="button">leaderboard</button></span>
   <span id="dayNum"></span>
 </footer>
+</div>
 
 <dialog id="how" aria-labelledby="howTitle">
   <div class="how-head"><h2 id="howTitle" tabindex="-1" autofocus>How to play</h2><img class="kit" src="kit-light.webp" width="120" height="146" alt="the white 2026-27 BatCH home kit"></div>
@@ -96,7 +100,7 @@
   <form method="dialog"><button class="btn">got it</button></form>
 </dialog>
 
-<script src="roster.js?v=7"></script>
-<script src="app.js?v=7"></script>
+<script src="roster.js?v=8"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

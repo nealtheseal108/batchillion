@@ -33,7 +33,7 @@ html { background: var(--ground); overflow-x: hidden; }
 body {
   background: var(--ground); color: var(--navy);
   font: 400 16px/1.45 var(--text);
-  min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column;
+  display: flex; flex-direction: column;
   padding: 0 16px; overflow-x: hidden; position: relative;
 }
 button { font: inherit; color: inherit; cursor: pointer; }
@@ -60,7 +60,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .dw-3 { width: 440px; height: 440px; right: -170px; bottom: -160px; transform: rotate(20deg); }
 .dw-4 { display: none; }
 .dw-5 { width: 300px; height: 300px; right: -150px; top: 360px; transform: rotate(60deg); }
-body > header, body > section, body > main, body > footer { position: relative; z-index: 1; }
+body > header, .below { position: relative; z-index: 1; }
+/* exactly one screen tall: the page scrolls at most the header's height, nothing more */
+.below { flex: none; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+.below > .field-wrap, .below > .foot { flex: none; }
+.below > .stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.below > .stage > .card { max-height: 100%; overflow-y: auto; scrollbar-width: thin; }
 
 /* ---------- header: the Carolina-blue away kit, full bleed ---------- */
 .jersey {
@@ -124,7 +129,7 @@ h1 {
 #trails circle { stroke: var(--navy); stroke-width: 3; }
 
 /* ---------- cards: ringed collar ---------- */
-.stage { max-width: 760px; width: 100%; margin: 32px auto 28px; flex: 1; }
+.stage { max-width: 760px; width: 100%; margin: 32px auto 28px; }
 .card {
   position: relative; background: var(--white); padding: 28px 28px 26px;
   border: 5px solid var(--navy); border-radius: 18px;
