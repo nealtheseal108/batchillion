@@ -199,10 +199,12 @@
   }
   // A round scored against everyone the player had already used. A teammate counts once per
   // player, ever, even when an appeal makes an old answer valid later.
+  // Only Players rounds spend names. Stat sheets let you name anyone again, so they skip the check.
+  const spends = (set) => (set || "classes") === "classes";
   function scoreRound(answers, used, set) {
     return (Array.isArray(answers) ? answers.slice(0, P.length) : []).map((a, k) => {
       const r = score(a, k, set);
-      if (!r.person) return r;
+      if (!r.person || !spends(set)) return r;   // stat sheets: any name, any number of times
       if (used.has(r.person.key)) return { pts: 0, person: r.person, status: `${r.person.full} was already used` };
       used.add(r.person.key);
       return r;
@@ -383,8 +385,8 @@
       <div class="card">
         <p class="kicker">BATCHILLION #${dayNum()}${practice ? " · PRACTICE" : ""}${st ? ` · STREAK ${st}` : ""}</p>
         <p class="prompt">You're up, <em>${esc(me.player)}</em>. Pick a round. The rarer the pick, the deeper the huck.</p>
-        <p class="hint">${today.rounds.length ? `Today: ${today.rounds.length} round${today.rounds.length > 1 ? "s" : ""}, ${today.yards} yards. ` : ""}${left ? `${left} teammate${left > 1 ? "s" : ""} left for you. Play as many rounds as you want; every name you use is gone for good.` : "You've used every teammate. Nobody left to throw to."}</p>
-        <div class="picks">${openRounds().map((r, i) => `<button class="btn pick${i ? " ghost" : ""}" data-set="${r.id}" type="button" ${left ? "" : "disabled"}><span>${esc(r.title)}${r.unlock ? ' <b class="new">new</b>' : ""}</span></button>`).join("")}</div>
+        <p class="hint">${today.rounds.length ? `Today: ${today.rounds.length} round${today.rounds.length > 1 ? "s" : ""}, ${today.yards} yards. ` : ""}Players: ${left ? `${left} teammate${left > 1 ? "s" : ""} left for you; a name you use there is gone for good.` : "you've used every teammate."} Stat sheets: reuse any name, any time.</p>
+        <div class="picks">${openRounds().map((r, i) => `<button class="btn pick${i ? " ghost" : ""}" data-set="${r.id}" type="button" ${spends(r.id) && !left ? "disabled" : ""}><span>${esc(r.title)}${r.unlock ? ' <b class="new">new</b>' : ""}</span><small>${spends(r.id) ? "names are gone for good" : "reuse any name"}</small></button>`).join("")}</div>
         <div class="row"><button class="linkish" id="out" type="button">not ${esc(me.player)}? sign out</button></div>
       </div>`);
     const first = stage.querySelector("[data-set]"); if (first) first.focus();
@@ -418,9 +420,10 @@
     const R = setOf(set), PR = R.prompts;
     const i = answers.length;
     if (i >= PR.length) return submitRound(answers, row, set);
-    const prior = practice ? new Set() : usedBefore(me.player, row);
+    const prior = practice || !spends(set) ? new Set() : usedBefore(me.player, row);
     const results = scoreRound(answers, new Set(prior), set);
-    const used = new Set(prior); results.forEach((r) => r.person && used.add(r.person.key));
+    const used = spends(set) ? new Set(prior) : new Set();
+    if (spends(set)) results.forEach((r) => r.person && used.add(r.person.key));
     resetField(results);
     // The clock lives in storage, so reloading mid-prompt does not buy a fresh 30 seconds.
     let clock = practice ? null : ls.get(clockKey(), null);
@@ -430,7 +433,7 @@
     const left = people.filter((p) => fits(PR[i], p) && !used.has(p.key)).length;
     show(`
       <div class="card">
-        <p class="kicker">${R.id === "classes" ? "" : `${esc(R.title.toUpperCase())} · `}PROMPT ${i + 1} / ${PR.length} · ${left} LEFT FOR YOU</p>
+        <p class="kicker">${spends(set) ? `PROMPT ${i + 1} / ${PR.length} · ${left} LEFT FOR YOU` : `${esc(R.title.toUpperCase())} · PROMPT ${i + 1} / ${PR.length} · REUSE ANY NAME`}</p>
         <p class="prompt">Name a BatCH teammate <em>${esc(PR[i].text)}</em></p>
         <div class="clock" id="clk"><span class="secs" id="secs">${SECONDS}</span><div class="timer" id="tm"><i></i></div></div>
         <form class="row" id="f" autocomplete="off">
@@ -474,7 +477,7 @@
           lastReject = raw; // kept so it can be appealed after the round
           return drop(`"${raw}" isn't on the roster. try again`);
         }
-        if (used.has(ex.key)) return drop(`${ex.full} is already used. ever. pick someone else`);
+        if (used.has(ex.key)) return drop(`${ex.full} is already used in Players. ever. pick someone else`);
         if (!catches) return drop(PR[i].tierOf ? `${ex.full} doesn't fit this one. try again` : `${ex.full} didn't start ${PR[i].short}. try again`);
       }
       locked = true; stopTimer();
@@ -568,7 +571,7 @@
         <p class="kicker">BATCHILLION #${dayNum()} · ${esc(R.title.toUpperCase())}${nth > 0 ? ` · ROUND ${nth} TODAY` : ""}${st ? ` · STREAK ${st}` : ""}</p>
         <p class="prompt">You threw it <em>${tot}</em> yards</p>
         <p class="verdict">${esc(verdict)}</p>
-        ${h ? `<p class="hint">Today: ${today.rounds.length} round${today.rounds.length === 1 ? "" : "s"}, ${today.yards} yards. ${left ? `${left} teammate${left > 1 ? "s" : ""} left for you.` : "You've used every teammate."}</p>` : ""}
+        ${h ? `<p class="hint">Today: ${today.rounds.length} round${today.rounds.length === 1 ? "" : "s"}, ${today.yards} yards. ${left ? `${left} teammate${left > 1 ? "s" : ""} left for you in Players.` : "You've used every teammate in Players."} ${spends(round.set) ? "" : "Stat sheets: reuse any name."}</p>` : ""}
         <ul class="recap">${res.map((r) => {
           const t = r.tier && T[r.tier];
           const ap = myAppeal && Number(myAppeal.prompt) === r.k ? `<span class="pending">appeal ${myAppeal.tier ? (myAppeal.tier === "reject" ? "rejected" : "ranked") : "pending"}</span>` : "";
@@ -580,7 +583,7 @@
         }).join("")}</ul>
         ${res.some(appealable) ? `<p class="hint">You get one appeal a day. ${esc(window.APPEAL_WHO)} ranks it and your score updates.</p>` : ""}
         <div class="row">
-          ${left ? `<button class="btn" id="again" type="button">another ${esc(R.title.toLowerCase())}</button>` : ""}
+          ${left || !spends(round.set) ? `<button class="btn" id="again" type="button">another ${esc(R.title.toLowerCase())}</button>` : ""}
           <button class="btn ghost" id="rounds" type="button">pick a round</button>
           <button class="btn ghost" id="share" type="button">share</button>
           <button class="btn ghost" id="lb" type="button">leaderboard</button>
@@ -599,7 +602,7 @@
       try { await navigator.clipboard.writeText(share); toast("copied"); }
       catch { const ta = document.createElement("textarea"); ta.value = share; stage.querySelector(".card-scroll").appendChild(ta); ta.select(); toast("select and copy"); }
     };
-    $("#lb").onclick = () => board();
+    $("#lb").onclick = () => board("today", round.set || "classes");
     if ($("#again")) $("#again").onclick = () => (practiceAnswers ? home() : startRound($("#again"), round.set || "classes"));
     $("#rounds").onclick = () => home();
   }
@@ -607,13 +610,16 @@
   // ---------- leaderboard ----------
   // ---------- leaderboard (a modal, like how to play) ----------
   // Opens over whatever screen is up, so it never interrupts a prompt; the clock keeps running.
-  async function board(view = "today") {
+  // One leaderboard per round type (Players, Stat sheet I, ...), each with today and all-time best.
+  let boardSet = "classes";
+  async function board(view = "today", set = boardSet) {
+    boardSet = set;
     const dlg = $("#board"), body = $("#boardBody");
     $("#boardSub").textContent = `BATCHILLION #${dayNum()}${API ? "" : " · LOCAL ONLY"}`;
     if (!dlg.open) { body.innerHTML = `<p class="hint">loading…</p>`; dlg.showModal(); }
     if (!(await pull())) {
       body.innerHTML = `<p class="hint">Can't reach the leaderboard right now.</p><div class="row"><button class="btn ghost" id="lbRetry" type="button">try again</button></div>`;
-      $("#lbRetry").onclick = () => board(view); return;
+      $("#lbRetry").onclick = () => board(view, set); return;
     }
     buildRoster();
     // One row per finished round (not per player): best single rounds win. Today = rounds thrown today.
@@ -628,10 +634,11 @@
         if (r.done || r.answers.length >= P.length) list.push({ name, set: r.set, yards: sum(r.results), date: r.date, isToday, nth: isToday ? nToday : 0 });
       });
     });
+    list = list.filter((r) => (r.set || "classes") === set);
     if (view === "today") list = list.filter((r) => r.isToday);
     list.sort((a, b) => b.yards - a.yards || a.name.localeCompare(b.name));
     list = list.slice(0, 50);
-    const when = (r) => { const t = setOf(r.set).title.toLowerCase(); if (r.isToday) return `${t} · round ${r.nth} today`; const [y, m, d] = dayParts(r.date); return `${t} · #${dayIndex(r.date) - FIRST + 1} · ${m}/${d}`; };
+    const when = (r) => { if (r.isToday) return `round ${r.nth} today`; const [y, m, d] = dayParts(r.date); return `#${dayIndex(r.date) - FIRST + 1} · ${m}/${d}`; };
     let rank = 0;
     const rows = list.map((r, i) => {
       if (i === 0 || r.yards !== list[i - 1].yards) rank = i + 1;
@@ -639,10 +646,14 @@
       return `<li class="${meRow ? "me" : ""}"><span class="rk">${rank}</span><span class="nm">${esc(r.name)}${meRow ? " (you)" : ""}</span><span class="sc">${r.yards}</span><span class="rd">${when(r)}</span></li>`;
     }).join("");
     $("#boardTabs").innerHTML = `
-      <button class="btn ${view === "today" ? "" : "ghost"}" data-v="today" type="button" aria-pressed="${view === "today"}">today</button>
-      <button class="btn ${view === "all" ? "" : "ghost"}" data-v="all" type="button" aria-pressed="${view === "all"}">all-time best</button>`;
-    body.innerHTML = list.length ? `<p class="hint">best single rounds, in yards</p><ol class="board">${rows}</ol>` : `<p class="hint">${view === "today" ? "nobody has finished a round today. be first." : "no rounds yet."}</p>`;
-    dlg.querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => board(b.dataset.v)));
+      <div class="row lb-sets">${openRounds().map((r) => `<button class="chip${r.id === set ? " on" : ""}" data-s="${r.id}" type="button" aria-pressed="${r.id === set}">${esc(r.title)}</button>`).join("")}</div>
+      <div class="row">
+        <button class="btn ${view === "today" ? "" : "ghost"}" data-v="today" type="button" aria-pressed="${view === "today"}">today</button>
+        <button class="btn ${view === "all" ? "" : "ghost"}" data-v="all" type="button" aria-pressed="${view === "all"}">all-time best</button>
+      </div>`;
+    body.innerHTML = list.length ? `<p class="hint">${esc(setOf(set).title)}: best single rounds, in yards</p><ol class="board">${rows}</ol>` : `<p class="hint">${view === "today" ? `nobody has finished a ${esc(setOf(set).title)} round today. be first.` : `no ${esc(setOf(set).title)} rounds yet.`}</p>`;
+    dlg.querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => board(b.dataset.v, set)));
+    dlg.querySelectorAll("[data-s]").forEach((b) => (b.onclick = () => board(view, b.dataset.s)));
   }
   // Guarded: during a deploy a cached older page can lack this button, and a crash here would blank the game.
   if ($("#boardAdmin")) $("#boardAdmin").onclick = () => { $("#board").close(); admin(); };

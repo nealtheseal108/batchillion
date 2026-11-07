@@ -110,9 +110,12 @@ function account_(player) {
 // ---------- rounds ----------
 // Keep only the fields the game uses, and enforce the never-reuse rule here too: a full name the
 // player already threw on an earlier day, or earlier in this round, is stored as "reused".
-function cleanAnswers_(answers, player, row, plays) {
+// Only Players rounds ("classes") spend names; stat sheet rounds let you reuse anyone.
+function cleanAnswers_(answers, player, row, plays, set) {
   const used = new Set();
-  plays.filter((r) => norm_(r.player) === norm_(player) && r._row !== row)
+  const spends = String(set || "classes") === "classes";
+  if (!spends) return answers.slice(0, PROMPTS).map((a) => { a = a && typeof a === "object" ? a : {}; return { typed: String(a.typed || "").slice(0, 60), full: a.full ? String(a.full).slice(0, 60) : null }; });
+  plays.filter((r) => norm_(r.player) === norm_(player) && r._row !== row && String(r.set || "classes") === "classes")
     .forEach((r) => parse_(r.answers).forEach((a) => a && a.full && used.add(norm_(a.full))));
   return answers.slice(0, PROMPTS).map((a) => {
     a = a && typeof a === "object" ? a : {};
@@ -227,7 +230,7 @@ function doPost(e) {
       // Saves can land out of order; a round only ever grows, so an older, shorter save is ignored.
       const stored = r.answers !== undefined ? parse_(r.answers) : [];
       if (b.answers.length < stored.length) return json_({ ok: true, done: false, answers: stored, stale: true });
-      const answers = cleanAnswers_(b.answers, player, r._row, plays);
+      const answers = cleanAnswers_(b.answers, player, r._row, plays, r.set);
       sh.getRange(r._row, 3).setValue(JSON.stringify(answers));
       const done = answers.length >= PROMPTS;
       if (done) sh.getRange(r._row, 5).setValue(new Date());

@@ -423,3 +423,8 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
 .btn.pick .new { font: 800 11px/1 var(--num); letter-spacing: .12em; background: var(--carolina); color: var(--navy); padding: 2px 5px 1px; border-radius: 4px; margin-left: 4px; vertical-align: 2px; }
 .btn.pick.ghost .new { background: var(--navy); color: var(--white); }
 @media (max-height: 620px) { .picks { gap: 6px; margin-bottom: 6px; } .btn.pick { padding: 8px 12px 7px; } }
+
+/* leaderboard round selector */
+.dlg-tabs { display: grid; gap: 8px; }
+.lb-sets { gap: 6px; }
+.lb-sets .chip.on { background: var(--navy); color: var(--white); }
