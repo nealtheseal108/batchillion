@@ -67,7 +67,17 @@ const norm_ = (s) => String(s || "").toLowerCase().replace(/[^a-z ]/g, "").repla
 // Anything a player types is stored as text, never as a formula.
 const cell_ = (s) => { s = String(s == null ? "" : s); return /^[=+\-@\t\r]/.test(s) ? "'" + s : s; };
 // Sheets may still turn a typed date into a Date object; read both shapes back as "yyyy-M-d".
-const day_ = (v) => (v instanceof Date ? Utilities.formatDate(v, ZONE, "yyyy-M-d") : String(v || "").trim());
+// New rows store dates as text (see text_); this only reads older rows that Sheets turned into dates.
+let SHEET_TZ_ = null;
+const sheetTz_ = () => SHEET_TZ_ || (SHEET_TZ_ = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone() || ZONE);
+// Sheets parsed "2026-11-7" as midnight UTC (seen in the live sheet), so a date sitting exactly on a UTC midnight
+// is read in UTC; anything else in the sheet's own zone.
+const day_ = (v) => {
+  if (!(v instanceof Date)) return String(v || "").replace(/^'/, "").trim();
+  const utcMidnight = v.getUTCHours() === 0 && v.getUTCMinutes() === 0 && v.getUTCSeconds() === 0;
+  return Utilities.formatDate(v, utcMidnight ? "UTC" : sheetTz_(), "yyyy-M-d");
+};
+const text_ = (s) => "'" + String(s);   // forces a cell to stay text
 const today_ = () => Utilities.formatDate(new Date(), ZONE, "yyyy-M-d");
 const yesterday_ = () => Utilities.formatDate(new Date(Date.now() - 864e5), ZONE, "yyyy-M-d");
 const parse_ = (s) => { try { const v = JSON.parse(s || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } };
@@ -97,9 +107,9 @@ function account_(player) {
 // ---------- rounds ----------
 // Keep only the fields the game uses, and enforce the never-reuse rule here too: a full name the
 // player already threw on an earlier day, or earlier in this round, is stored as "reused".
-function cleanAnswers_(answers, player, date, plays) {
+function cleanAnswers_(answers, player, row, plays) {
   const used = new Set();
-  plays.filter((r) => norm_(r.player) === norm_(player) && day_(r.date) !== date)
+  plays.filter((r) => norm_(r.player) === norm_(player) && r._row !== row)
     .forEach((r) => parse_(r.answers).forEach((a) => a && a.full && used.add(norm_(a.full))));
   return answers.slice(0, PROMPTS).map((a) => {
     a = a && typeof a === "object" ? a : {};
@@ -113,7 +123,7 @@ function cleanAnswers_(answers, player, date, plays) {
 // GET: everything the game needs. All rounds (for the leaderboard and the never-reuse rule), all
 // appeals (ranked ones become roster additions), and today's date in Eastern time.
 function doGet() {
-  const plays = rows_("plays").map((r) => ({ date: day_(r.date), player: String(r.player), answers: parse_(r.answers) }));
+  const plays = rows_("plays").map((r) => ({ row: r._row, date: day_(r.date), player: String(r.player), answers: parse_(r.answers), done: String(r.submittedAt || "") !== "" }));
   const appeals = rows_("appeals").map((r) => ({
     date: day_(r.date), player: String(r.player), prompt: Number(r.prompt), typed: String(r.typed),
     tier: String(r.tier || "").trim().toLowerCase(), year: String(r.year || "").trim(),
@@ -189,50 +199,46 @@ function doPost(e) {
     const name = acct.name;   // store the account's own spelling of the name
 
     const plays = rows_("plays");
-    // All of this player's rows for the day: a round counts as thrown if ANY of them has answers, and an
-    // empty claim row is the one to fill in, so a day never ends up with two rows.
-    const minesToday = plays.filter((r) => day_(r.date) === date && norm_(r.player) === norm_(player));
-    const thrown = minesToday.some((r) => parse_(r.answers).length > 0);
-    const mine = minesToday.find((r) => parse_(r.answers).length === 0) || minesToday[0];
+    const mineAll = plays.filter((r) => norm_(r.player) === norm_(player));
+    const isDone = (r) => String(r.submittedAt || "") !== "";
+    const sh = sheet_("plays");
 
-    // Start: claims today's round the moment the first prompt appears, so a round abandoned in a
-    // second browser still counts as today's one round.
+    // Start: as many rounds a day as you like. Reuse a round left open today, or open a new one.
     if (b.action === "start") {
       if (date !== today_()) return json_({ ok: false, error: "a new Batchillion is live. reload the page" });
-      if (thrown) return json_({ ok: false, error: "already played today" });
-      if (mine) return json_({ ok: true, fresh: false });
-      sheet_("plays").appendRow([date, cell_(name), "", new Date(), ""]);
-      // Marks the round as live for 15 minutes, so opening the site on a second device can't forfeit it.
-      CacheService.getScriptCache().put("live:" + norm_(name) + ":" + date, "1", 900);
-      return json_({ ok: true, fresh: true });
+      const open = mineAll.find((r) => day_(r.date) === date && !isDone(r));
+      if (open) return json_({ ok: true, row: open._row, answers: parse_(open.answers) });
+      sh.appendRow([text_(date), cell_(name), "", new Date(), ""]);
+      return json_({ ok: true, row: sh.getLastRow(), answers: [] });
     }
 
-    if (b.action === "play") {
+    // Throw: saves the round so far (each throw spends the teammate); 7 answers closes the round.
+    if (b.action === "throw" || b.action === "play") {
       if (!dayOk_(date)) return json_({ ok: false, error: "that day is over. a new Batchillion is live" });
-      if (thrown) return json_({ ok: false, error: "already played today" });
-      if (b.forfeit && mine && CacheService.getScriptCache().get("live:" + norm_(name) + ":" + date))
-        return json_({ ok: false, error: "round in progress on another device", live: true });
-      if (!Array.isArray(b.answers) || b.answers.length !== PROMPTS) return json_({ ok: false, error: "bad request" });
-      const answers = JSON.stringify(cleanAnswers_(b.answers, player, date, plays));
-      const sh = sheet_("plays");
-      if (mine) { sh.getRange(mine._row, 3).setValue(answers); sh.getRange(mine._row, 5).setValue(new Date()); }
-      else sh.appendRow([date, cell_(name), answers, new Date(), new Date()]);
-      return json_({ ok: true });
+      if (!Array.isArray(b.answers) || !b.answers.length || b.answers.length > PROMPTS) return json_({ ok: false, error: "bad request" });
+      let r = mineAll.find((x) => x._row === Number(b.row));
+      if (!r && b.action === "play") r = mineAll.find((x) => day_(x.date) === date && !isDone(x));   // older pages
+      if (!r) { sh.appendRow([text_(date), cell_(name), "", new Date(), ""]); r = { _row: sh.getLastRow(), submittedAt: "" }; }
+      if (isDone(r)) return json_({ ok: false, error: "that round is closed" });
+      const answers = cleanAnswers_(b.answers, player, r._row, plays);
+      sh.getRange(r._row, 3).setValue(JSON.stringify(answers));
+      const done = answers.length >= PROMPTS;
+      if (done) sh.getRange(r._row, 5).setValue(new Date());
+      return json_({ ok: true, done, answers });
     }
 
-    // Appeal: one a day, only for a name this player actually threw today that matched nobody.
+    // Appeal: one a day, only for a name this player threw today that matched nobody.
     if (b.action === "appeal") {
       if (!dayOk_(date)) return json_({ ok: false, error: "that day is over" });
       const k = Number(b.prompt), typed = String(b.typed || "").trim().slice(0, 60);
       if (!(k >= 0 && k < PROMPTS && Math.floor(k) === k) || norm_(typed).replace(/ /g, "").length < 2) return json_({ ok: false, error: "bad request" });
-      const thrownRow = minesToday.find((r) => parse_(r.answers).length > 0);
-      const ans = thrownRow ? parse_(thrownRow.answers)[k] : null;
-      if (!ans || ans.full || norm_(ans.typed) !== norm_(typed)) return json_({ ok: false, error: "you can only appeal a name you threw today" });
+      const threw = mineAll.filter((r) => day_(r.date) === date).some((r) => { const a = parse_(r.answers)[k]; return a && !a.full && norm_(a.typed) === norm_(typed); });
+      if (!threw) return json_({ ok: false, error: "you can only appeal a name you threw today" });
       if (rows_("appeals").some((r) => day_(r.date) === date && norm_(r.player) === norm_(player))) return json_({ ok: false, error: "one appeal per day" });
-      sheet_("appeals").appendRow([date, cell_(name), k, cell_(typed), "", "", new Date()]);
+      sheet_("appeals").appendRow([text_(date), cell_(name), k, cell_(typed), "", "", new Date()]);
       try {
         MailApp.sendEmail(Session.getEffectiveUser().getEmail(),   // the sheet owner (the script runs as them)
-           `Batchillion appeal: ${typed}`,
+          `Batchillion appeal: ${typed}`,
           `${name} appealed "${typed}" for prompt ${k + 1} on ${date}.\n\n` +
           `Rank it on the site (leaderboard > admin) or in the appeals tab: ${SpreadsheetApp.getActiveSpreadsheet().getUrl()}`);
       } catch (err) { /* the appeal is saved even if the email quota is used up */ }
