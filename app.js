@@ -684,7 +684,13 @@
     const capped = raw && ORDER.indexOf(raw) < ORDER.indexOf(tier) && tier === c;
     if (capped) out += ` That alone would make them ${lbl(raw)}, but ${name} plays ${c === "rare" ? "fewer minutes than most" : "about average minutes"} this season, so the highest they can be is ${lbl(c)}.`;
     else if (tier === "krillion") out += " Nobody else is that low, so one in a batchillion.";
-    else out += ` Ranked against everyone who fits${q.ratio ? " (points played count too on ratio questions)" : ""}, that's in the ${{ plankton: "top 20%", schooler: "next 40%", rare: "next 25%", deep: "bottom 15%" }[tier]}, so ${lbl(tier)}.`;
+    else {
+      const band = { plankton: "top 20%", schooler: "next 40%", rare: "next 25%", deep: "bottom 15%" }[tier];
+      const tiedN = vOf && vOf[person.key] != null ? Object.values(vOf).filter((x) => x === vOf[person.key]).length : 1;
+      out += tiedN > 1
+        ? ` Everyone tied at that number shares one tier, and that group of ${tiedN} starts in the ${band} of the ranking${q.ratio ? " (points played count too on ratio questions)" : ""}, so ${lbl(tier)}.`
+        : ` Ranked against everyone who fits${q.ratio ? " (points played count too on ratio questions)" : ""}, that's in the ${band}, so ${lbl(tier)}.`;
+    }
     if (crowdTiers(set, date)) out += " Tiers here also lean on what players typed on earlier days.";
     return out;
   }
