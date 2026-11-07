@@ -1,0 +1,136 @@
+// Sideline music: the same playlist and player as the World Cup site, through YouTube's IFrame API.
+// Fades in and out between songs, prev / play-pause / next / loop-one, skips anything that won't
+// embed. Starts on the first tap anywhere unless this viewer turned the music off before.
+(() => {
+  const MUSIC = [
+    { id: "K4Fk9Clc12w", title: "Shotput (slowed + reverb)", artist: "Still Woozy" },
+    { id: "hb24kZ0fiEA", title: "Flight's Booked", artist: "Drake", start: 55 },
+    { id: "1_w9ZtbHj_E", title: "Link Up", artist: "Don Toliver" },
+    { id: "nfJReXaXkTY", title: "Passionfruit (slowed + reverb)", artist: "Drake", start: 72 },
+    { id: "wTPWI3qkx5c", title: "Heat Waves (8D slowed)", artist: "Glass Animals" },
+    { id: "-J2rSm8K9_Y", title: "Babydoll", artist: "Dominic Fike" },
+    { id: "ISsxv6i9f_k", title: "Kiss Me More (slowed + reverb)", artist: "Doja Cat & SZA" },
+    { id: "y9NPx6NDA6M", title: "Ay No Puedo", artist: "The Marías" },
+    { id: "_9hkXCYiEjc", title: "No One Noticed", artist: "The Marías" },
+    { id: "U8F5G5wR1mk", title: "tv off", artist: "Kendrick Lamar" },
+    { id: "0UPDBODtxzw", title: "Dracula (JENNIE Remix)", artist: "Tame Impala & JENNIE", start: 24 },
+  ];
+  const MAXVOL = 45, FADE_MS = 2500, FADE_TICK = 80;
+  const $ = (s) => document.querySelector(s);
+  const pref = {
+    get() { try { return localStorage.getItem("bh:music"); } catch { return null; } },
+    set(v) { try { localStorage.setItem("bh:music", v); } catch {} },
+  };
+
+  let player = null, ready = false, on = false, wanted = false, idx = 0, repeatOne = false, fadeTimer = null, endWatch = null;
+
+  function paint() {
+    const t = MUSIC[idx];
+    $("#pbTitle").textContent = t.title;
+    $("#pbArtist").textContent = t.artist;
+    $("#pbPlay").setAttribute("aria-label", on ? "Pause" : "Play");
+    $("#pbPlay").classList.toggle("is-on", on);
+    $("#tunes").classList.toggle("playing", on);
+    $("#pbLoop").classList.toggle("is-on", repeatOne);
+    $("#pbLoop").setAttribute("aria-pressed", String(repeatOne));
+  }
+  const clearFade = () => { clearInterval(fadeTimer); fadeTimer = null; };
+  function fadeTo(target) {
+    clearFade();
+    let start; try { start = player.getVolume(); } catch { start = target; }
+    const steps = Math.max(1, Math.round(FADE_MS / FADE_TICK)); let i = 0;
+    fadeTimer = setInterval(() => {
+      i++;
+      try { player.setVolume(Math.max(0, Math.min(100, start + (target - start) * (i / steps)))); } catch {}
+      if (i >= steps) clearFade();
+    }, FADE_TICK);
+  }
+  function armEndWatch() { // fade out into the next song
+    clearInterval(endWatch);
+    endWatch = setInterval(() => {
+      if (!on) return;
+      try {
+        const d = player.getDuration(), t = player.getCurrentTime();
+        if (d > 0 && d - t <= FADE_MS / 1000 + 0.3) { clearInterval(endWatch); endWatch = null; fadeTo(0); }
+      } catch {}
+    }, 300);
+  }
+  function load(i) {
+    idx = (i + MUSIC.length) % MUSIC.length;
+    wanted = on = true;
+    const t = MUSIC[idx];
+    try {
+      player.unMute(); player.setVolume(0);
+      player.loadVideoById(t.start ? { videoId: t.id, startSeconds: t.start } : t.id);
+      player.playVideo();
+    } catch {}
+    paint();
+  }
+  function start() {
+    wanted = true;
+    if (!ready || !player) return;
+    try {
+      player.unMute(); on = true;
+      if (player.getPlayerState() !== 2) player.setVolume(0); // fresh start fades in; a resume keeps its volume
+      player.playVideo(); fadeTo(MAXVOL); armEndWatch();
+    } catch {}
+    paint();
+  }
+  function pause() {
+    try { player.pauseVideo(); } catch {}
+    on = false; wanted = false; clearFade(); clearInterval(endWatch); endWatch = null; paint();
+  }
+  const next = () => load(idx + 1);
+  function prev() { // well into a song, "previous" restarts it; otherwise go back one
+    let restart = false; try { restart = player.getCurrentTime() > 3; } catch {}
+    load(restart ? idx : idx - 1);
+  }
+
+  window.onYouTubeIframeAPIReady = () => {
+    player = new YT.Player("ythost", {
+      videoId: MUSIC[0].id,
+      playerVars: { autoplay: 0, playsinline: 1, controls: 0, rel: 0 },
+      events: {
+        onReady: () => { ready = true; paint(); if (wanted) start(); },
+        onStateChange: (e) => {
+          if (e.data === YT.PlayerState.ENDED) repeatOne ? load(idx) : next();
+          else if (e.data === YT.PlayerState.PLAYING && on) { fadeTo(MAXVOL); armEndWatch(); paint(); }
+        },
+        onError: () => next(), // skip any song that won't play here
+      },
+    });
+  };
+
+  // Controls
+  const tunes = $("#tunes"), tab = $("#tunesTab");
+  const setOpen = (open) => { tunes.classList.toggle("open", open); tab.setAttribute("aria-expanded", String(open)); };
+  tab.onclick = () => setOpen(!tunes.classList.contains("open"));
+  $("#pbPlay").onclick = () => { if (on) { pause(); pref.set("off"); } else { start(); pref.set("on"); } };
+  $("#pbNext").onclick = () => { pref.set("on"); next(); };
+  $("#pbPrev").onclick = () => { pref.set("on"); prev(); };
+  $("#pbLoop").onclick = () => { repeatOne = !repeatOne; paint(); };
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
+  document.addEventListener("pointerdown", (e) => { if (!tunes.contains(e.target)) setOpen(false); });
+
+  // Like the World Cup site: the first tap anywhere starts the music, unless this viewer paused it before.
+  if (pref.get() !== "off") document.addEventListener("pointerdown", function first(e) {
+    document.removeEventListener("pointerdown", first, true);
+    if (!tunes.contains(e.target)) start();
+  }, true);
+
+  // Phones and tablets: pin the tab to the top of the far end zone so it scrolls with the field and
+  // never covers the header, the name box or buttons. Big screens use the fixed side dock (CSS).
+  const small = matchMedia("(max-width: 899px)"), field = $(".field-wrap");
+  function place() {
+    if (!small.matches || !field) { tunes.style.top = ""; return; }
+    tunes.style.top = Math.round(field.getBoundingClientRect().top + scrollY + 14) + "px";
+  }
+  place();
+  addEventListener("resize", place);
+  small.addEventListener("change", place);
+  if (window.ResizeObserver) new ResizeObserver(place).observe($(".jersey"));
+
+  // Big screens start with the player slid out; phones keep it tucked away.
+  if (matchMedia("(min-width: 1280px)").matches) setOpen(true);
+  paint();
+})();

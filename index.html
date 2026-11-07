@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@700;800;900&family=Bitter:ital,wght@1,700;1,800&family=Saira+Extra+Condensed:wght@700;800&family=Barlow:wght@400;600;700&display=swap">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 <!-- one dogwood (NC state flower) drawing, reused for the header flower and the corner flowers -->
@@ -100,7 +100,29 @@
   <form method="dialog"><button class="btn">got it</button></form>
 </dialog>
 
-<script src="roster.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<!-- Sideline music: same playlist as the World Cup site (see music.js). -->
+<div id="ythost" aria-hidden="true"></div>
+<aside id="tunes" class="tunes" aria-label="Music player">
+  <button class="tunes-tab" id="tunesTab" type="button" aria-expanded="false" aria-controls="tunesPanel" title="Music">
+    <svg viewBox="0 0 24 24" aria-hidden="true" class="ic-note"><path d="M9 18.5a2.5 2.5 0 1 1-2-2.45V5.5l11-2v11a2.5 2.5 0 1 1-2-2.45V7.1l-7 1.3z"/></svg>
+    <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
+  </button>
+  <div class="tunes-panel" id="tunesPanel">
+    <p class="tunes-kicker">On the sideline</p>
+    <p class="tunes-title" id="pbTitle">Shotput (slowed + reverb)</p>
+    <p class="tunes-artist" id="pbArtist">Still Woozy</p>
+    <div class="tunes-ctrls">
+      <button type="button" class="tb" id="pbPrev" aria-label="Previous song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button type="button" class="tb tb-play" id="pbPlay" aria-label="Play"><svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
+      <button type="button" class="tb" id="pbNext" aria-label="Next song"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+      <button type="button" class="tb tb-loop" id="pbLoop" aria-label="Loop this song" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v3l4-4-4-4v3H5v6h2zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2z"/></svg></button>
+    </div>
+  </div>
+</aside>
+
+<script src="roster.js?v=9"></script>
+<script src="app.js?v=9"></script>
+<script src="music.js?v=9"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
