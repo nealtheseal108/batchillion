@@ -661,7 +661,7 @@
     remote.appeals.forEach((a) => {
       const k = norm(a.typed); if (!k) return;
       const it = (byName[k] = byName[k] || { typed: a.typed, tier: a.tier, year: a.year, from: [] });
-      it.from.push(`${a.player} (${P[a.prompt] ? P[a.prompt].text.replace("who started at UNC in ", "") : "?"})`);
+      it.from.push(`${a.player} (${P[a.prompt] ? P[a.prompt].text.replace("who started university in ", "") : "?"})`);
     });
     const items = Object.values(byName).sort((a, b) => (a.tier ? 1 : 0) - (b.tier ? 1 : 0));
     show(`

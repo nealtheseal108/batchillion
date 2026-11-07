@@ -304,8 +304,8 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
 /* ---------- footer music player (music.js) ---------- */
 #ythost { position: fixed; width: 1px; height: 1px; left: -9999px; top: -9999px; opacity: 0; pointer-events: none; }
 .tunes {
-  display: flex; align-items: center; gap: 10px; min-width: 0; flex: 0 1 440px;
-  background: var(--white); border-radius: 10px; padding: 4px 5px 4px 10px;
+  display: flex; align-items: center; gap: 14px; min-width: 0; flex: 0 1 460px;
+  background: var(--white); border-radius: 12px; padding: 8px 10px 8px 16px;
   box-shadow: inset 0 0 0 2px var(--navy), 0 0 0 3px var(--ground);
 }
 .tunes-ic { position: relative; flex: none; width: 22px; height: 22px; display: grid; place-items: center; color: var(--navy); }
@@ -320,7 +320,7 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
 .tunes-title, .tunes-artist { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tunes-title { font: italic 800 14px/1.2 var(--script); color: var(--navy); }
 .tunes-artist { font-size: 12px; color: var(--graphite); }
-.tunes-ctrls { flex: none; display: flex; gap: 4px; align-items: center; }
+.tunes-ctrls { flex: none; display: flex; gap: 6px; align-items: center; }
 .tb { width: 30px; height: 30px; border: 0; padding: 0; display: grid; place-items: center; border-radius: 50%; background: var(--white); color: var(--navy); box-shadow: inset 0 0 0 2px var(--navy); }
 .tb svg { width: 15px; height: 15px; fill: currentColor; }
 .tb:hover { background: var(--carolina-tint); }
@@ -338,7 +338,7 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
   .foot .lg { display: none; }
   .foot .sm { display: inline; }
   .foot > span { flex: none; }
-  .tunes { flex: 1 1 auto; gap: 6px; padding: 3px 4px 3px 8px; }
+  .tunes { flex: 1 1 auto; gap: 8px; padding: 6px 7px 6px 11px; }
   .tunes-artist, #pbPrev, #pbLoop { display: none; }
   .tunes-title { font-size: 13px; }
   .tb { width: 28px; height: 28px; }
@@ -411,7 +411,7 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
   .secs { font-size: 30px; }
   input[type=text], input[type=password] { padding: 7px 11px; font-size: 16px; }
   .foot > span { padding: 3px 9px 2px; }
-  .tunes { padding: 2px 4px 2px 8px; }
+  .tunes { padding: 4px 6px 4px 10px; }
   .tb { width: 26px; height: 26px; } .tb-play { width: 28px; height: 28px; }
   .card .legend { display: none; }   /* the tier key is also in how to play */
 }

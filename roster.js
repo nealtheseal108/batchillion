@@ -1,7 +1,7 @@
 // BatCH roster for the daily huck game.
 // One line per member who has played at least one tournament (BatCH Bash counts).
 // tier: plankton | clever | schooler | rare | deep | krillion
-// year: the year they started at UNC, or a list of years when either counts ([2022, 2023]).
+// year: the year they started university (any school), or a list of years when either counts ([2022, 2023]).
 //   Anything 2021 or earlier lands in the "2021 or before" prompt.
 // note (optional 4th field): an extra line shown when someone guesses them.
 // To add or re-rank someone, edit this list and push. Every player's score is recomputed from
@@ -106,12 +106,12 @@ window.pickKrillion = () => {
 
 // The seven daily prompts, in order.
 window.PROMPTS = [
-  { id: "y2021", short: "in 2021 or before", text: "who started at UNC in 2021 or before", test: (y) => y <= 2021 },
-  { id: "y2022", short: "in 2022", text: "who started at UNC in 2022", test: (y) => y === 2022 },
-  { id: "y2023", short: "in 2023", text: "who started at UNC in 2023", test: (y) => y === 2023 },
-  { id: "y2024", short: "in 2024", text: "who started at UNC in 2024", test: (y) => y === 2024 },
-  { id: "y2025", short: "in 2025", text: "who started at UNC in 2025", test: (y) => y === 2025 },
-  { id: "y2026", short: "in 2026", text: "who started at UNC in 2026", test: (y) => y === 2026 },
+  { id: "y2021", short: "in 2021 or before", text: "who started university in 2021 or before", test: (y) => y <= 2021 },
+  { id: "y2022", short: "in 2022", text: "who started university in 2022", test: (y) => y === 2022 },
+  { id: "y2023", short: "in 2023", text: "who started university in 2023", test: (y) => y === 2023 },
+  { id: "y2024", short: "in 2024", text: "who started university in 2024", test: (y) => y === 2024 },
+  { id: "y2025", short: "in 2025", text: "who started university in 2025", test: (y) => y === 2025 },
+  { id: "y2026", short: "in 2026", text: "who started university in 2026", test: (y) => y === 2026 },
   { id: "wild",  short: "ever", text: "who ever played, any year (wildcard)", test: () => true },
 ];
 
