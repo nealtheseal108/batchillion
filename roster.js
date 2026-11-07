@@ -127,8 +127,8 @@ window.PROMPTS = [
 // the least frequent is the one in a batchillion, then schooler, rare and deep cut in between.
 // Stats names map to roster names (Matthew = Matthew Bain, Michael = Michael Sun, Noah N = Noah Biggers).
 window.ROUNDS = [
-  { id: "classes", title: "Players", blurb: "one teammate per starting year", prompts: window.PROMPTS },
-  { id: "stats1", title: "Stat sheet I", blurb: "assists, Ds, pulls, Feasterns, Duke", unlock: "2026-11-7", prompts: [
+  { id: "classes", title: "Players", prompts: window.PROMPTS },
+  { id: "stats1", title: "Stat sheet I", unlock: "2026-11-7", prompts: [
       { id: "owen-ast", short: "Owen assisted", text: "that Owen has thrown a goal to", tiers: {"Bryce": "plankton", "Dylan Edwards": "krillion", "Gavin": "rare", "Noah Goldblatt": "schooler", "Parker": "deep"} },
       { id: "nate-ast", short: "Nate assisted", text: "that Nate has thrown a goal to", tiers: {"Ben Horton": "deep", "Bryce": "plankton", "Daniel": "rare", "Gavin": "rare", "Kent": "deep", "Micah": "schooler", "Noah Goldblatt": "krillion", "Oliver": "rare", "Owen": "schooler"} },
       { id: "to-gavin", short: "threw to Gavin", text: "who has thrown a goal to Gavin", tiers: {"Aashay Rathi": "deep", "Bryce": "schooler", "Carson Jewell": "schooler", "Centurion": "deep", "Kent": "deep", "Max": "krillion", "Nate": "rare", "Neal": "plankton", "Oliver": "rare", "Owen": "rare"} },
@@ -137,7 +137,7 @@ window.ROUNDS = [
       { id: "pulled", short: "pulled", text: "who has pulled this season", tiers: {"Andrew Carneiro": "schooler", "Bryce": "deep", "Carson Jewell": "krillion", "Centurion": "rare", "Gavin": "rare", "Kent": "deep", "King": "deep", "Max": "plankton", "Neal": "schooler", "Noah Goldblatt": "rare"} },
       { id: "vs-duke", short: "scored vs Duke", text: "who scored against Duke", tiers: {"Andrew Carneiro": "schooler", "Bryce": "rare", "Carson Jewell": "deep", "Dylan Edwards": "schooler", "Gavin": "plankton", "Noah Goldblatt": "deep", "Oliver": "rare", "Ryan B": "krillion"} },
     ] },
-  { id: "stats2", title: "Stat sheet II", blurb: "assists, drops, Bankrun, USC, 5+ goals", unlock: "2026-11-7", prompts: [
+  { id: "stats2", title: "Stat sheet II", unlock: "2026-11-7", prompts: [
       { id: "oliver-ast", short: "Oliver assisted", text: "that Oliver has thrown a goal to", tiers: {"Bryce": "schooler", "Gavin": "deep", "Kent": "schooler", "Micah": "deep", "Nate": "rare", "Noah Goldblatt": "krillion", "Owen": "plankton", "Parker": "rare"} },
       { id: "bryce-ast", short: "Bryce assisted", text: "that Bryce has thrown a goal to", tiers: {"Aashay Rathi": "rare", "Ben Horton": "deep", "Centurion": "deep", "Gavin": "schooler", "Micah": "deep", "Michael Sun": "krillion", "Nate": "schooler", "Neal": "rare", "Oliver": "plankton", "Owen": "rare"} },
       { id: "to-owen", short: "threw to Owen", text: "who has thrown a goal to Owen", tiers: {"Aashay Rathi": "deep", "Bryce": "rare", "Gavin": "schooler", "Kent": "deep", "Nate": "schooler", "Neal": "rare", "Noah Goldblatt": "krillion", "Oliver": "plankton", "Parker": "rare"} },

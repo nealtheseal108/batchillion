@@ -384,7 +384,7 @@
         <p class="kicker">BATCHILLION #${dayNum()}${practice ? " · PRACTICE" : ""}${st ? ` · STREAK ${st}` : ""}</p>
         <p class="prompt">You're up, <em>${esc(me.player)}</em>. Pick a round. The rarer the pick, the deeper the huck.</p>
         <p class="hint">${today.rounds.length ? `Today: ${today.rounds.length} round${today.rounds.length > 1 ? "s" : ""}, ${today.yards} yards. ` : ""}${left ? `${left} teammate${left > 1 ? "s" : ""} left for you. Play as many rounds as you want; every name you use is gone for good.` : "You've used every teammate. Nobody left to throw to."}</p>
-        <div class="picks">${openRounds().map((r, i) => `<button class="btn pick${i ? " ghost" : ""}" data-set="${r.id}" type="button" ${left ? "" : "disabled"}><span>${esc(r.title)}${r.unlock ? ' <b class="new">new</b>' : ""}</span><small>${esc(r.blurb || "")}</small></button>`).join("")}</div>
+        <div class="picks">${openRounds().map((r, i) => `<button class="btn pick${i ? " ghost" : ""}" data-set="${r.id}" type="button" ${left ? "" : "disabled"}><span>${esc(r.title)}${r.unlock ? ' <b class="new">new</b>' : ""}</span></button>`).join("")}</div>
         <div class="row"><button class="linkish" id="out" type="button">not ${esc(me.player)}? sign out</button></div>
       </div>`);
     const first = stage.querySelector("[data-set]"); if (first) first.focus();
