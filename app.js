@@ -1,234 +1,669 @@
 (() => {
-  const SECONDS = 25;
-  const START_DAY = new Date(2026, 10, 6); // huck #1 = Nov 6, 2026
+  const SECONDS = 30;
+  const ZONE = "America/New_York"; // the day flips at midnight Eastern for everyone
   const $ = (s) => document.querySelector(s);
   const stage = $("#stage");
+  const API = window.BACKEND_URL || "";
+  const T = window.TIERS, P = window.PROMPTS;
 
-  // ---------- roster ----------
-  const people = window.ROSTER.map(([full, tier, year], i) => ({
-    id: i, full, tier, year, first: full.split(" ")[0].toLowerCase(), key: full.toLowerCase(),
-  }));
-  const norm = (s) => (s || "").toLowerCase().replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
-  const byFirst = (q) => people.filter((p) => p.first === q);
-
-  // Resolve typed text to roster people. Exact full name wins; a bare first name resolves
-  // only when nobody else shares it; "andrew c" narrows by the start of the full name.
-  function lookup(text) {
-    const q = norm(text);
-    if (!q) return [];
-    const full = people.filter((p) => p.key === q);
-    if (full.length) return full;
-    if (!q.includes(" ")) return byFirst(q);
-    return people.filter((p) => p.key.startsWith(q));
-  }
-
-  // ---------- day + storage ----------
-  const today = new Date();
-  const dayKey = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-  const dayNum = Math.max(1, Math.floor((new Date(today.getFullYear(), today.getMonth(), today.getDate()) - START_DAY) / 864e5) + 1);
-  $("#dayNum").textContent = `HUCK #${dayNum}`;
-  const practice = new URLSearchParams(location.search).has("practice");
-  const store = {
-    get() { try { return JSON.parse(localStorage.getItem("hucks:" + dayKey)); } catch { return null; } },
-    set(v) { if (practice) return; try { localStorage.setItem("hucks:" + dayKey, JSON.stringify(v)); } catch {} },
+  // ---------- helpers ----------
+  const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const yearsOf = (y) => (Array.isArray(y) ? y : String(y || "").split(/[\/, ]+/).map(Number).filter(Boolean));
+  const ls = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
   };
+  function toast(msg) {
+    const el = document.createElement("div"); el.className = "toast"; el.setAttribute("role", "status"); el.textContent = msg;
+    document.body.appendChild(el); setTimeout(() => el.remove(), 2600);
+  }
+  // One prompt clock at a time; every screen change stops it.
+  let activeTimer = null;
+  const stopTimer = () => { clearInterval(activeTimer); activeTimer = null; };
+  let nav = 0; // bumps on every screen change, so a slow async screen can tell it was replaced
+  const show = (html) => { stopTimer(); nav++; $("#boardBtn").disabled = false; stage.innerHTML = html; };
 
-  // Score one saved answer against the CURRENT roster, so an appealed name scores
-  // as soon as Neal adds it to roster.js.
-  function score(ans, prompt) {
-    const hits = ans.pid != null ? [people.find((p) => p.full === ans.full)].filter(Boolean) : lookup(ans.typed);
-    if (hits.length !== 1) {
-      return { pts: 0, tier: null, status: ans.typed ? (ans.appeal ? "appeal pending" : "not on the roster") : "no answer" };
+  // ---------- day (Eastern time) ----------
+  let skew = 0; // server clock minus device clock, so the day flips on the server's midnight
+  const nowMs = () => Date.now() + skew;
+  const etKey = (d = new Date(nowMs())) => {
+    const f = new Intl.DateTimeFormat("en-CA", { timeZone: ZONE, year: "numeric", month: "numeric", day: "numeric" }).formatToParts(d);
+    const g = (t) => +f.find((p) => p.type === t).value;
+    return `${g("year")}-${g("month")}-${g("day")}`;
+  };
+  const dayParts = (k) => k.split("-").map(Number);
+  const dayIndex = (k) => { const [y, m, d] = dayParts(k); return Math.round(Date.UTC(y, m - 1, d) / 864e5); };
+  const FIRST = dayIndex("2026-11-6"); // Batchillion #1
+  let dayKey = etKey();
+  const dayNum = () => Math.max(1, dayIndex(dayKey) - FIRST + 1);
+  const paintDay = () => ($("#dayNum").textContent = `BATCHILLION #${dayNum()}`);
+  paintDay();
+  const practice = !API && new URLSearchParams(location.search).has("practice"); // local testing only
+
+  // ---------- backend ----------
+  let remote = { plays: [], appeals: [] }, online = !API;
+  async function pull(keepDay = false) {
+    if (!API) { remote = { plays: ls.get("bh:plays", []), appeals: ls.get("bh:appeals", []) }; return true; }
+    try {
+      const r = await fetch(API, { cache: "no-store" }); const j = await r.json();
+      if (!j.ok) throw 0;
+      remote = { plays: Array.isArray(j.plays) ? j.plays : [], appeals: Array.isArray(j.appeals) ? j.appeals : [] };
+      if (typeof j.now === "number") skew = j.now - Date.now();
+      if (!keepDay && j.today && j.today !== dayKey) { dayKey = j.today; paintDay(); } // the server's calendar wins
+      return (online = true);
+    } catch { return (online = false); }
+  }
+  async function post(body) {
+    if (!API) return localPost(body);
+    try {
+      const r = await fetch(API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
+      return await r.json();
+    } catch { return { ok: false, error: "couldn't reach the server", net: true }; }
+  }
+  // Local-only stand-in for backend/Code.gs, so the game runs before the backend is deployed.
+  function localPost(b) {
+    const accts = ls.get("bh:accounts", {}), name = String(b.player || "").trim();
+    if (b.action === "register" || b.action === "signin") {
+      if (norm(name).replace(/ /g, "").length < 2) return { ok: false, error: "use at least two letters in your name" };
+      const a = accts[norm(name)];
+      if (b.action === "register") {
+        if (a) return { ok: false, error: "that name already has an account. sign in instead" };
+        accts[norm(name)] = { name, pw: b.password || "" }; ls.set("bh:accounts", accts);
+        return { ok: true, player: name, token: "local" };
+      }
+      if (!a) return { ok: false, error: "no account", noAccount: true };
+      return a.pw === (b.password || "") ? { ok: true, player: a.name, token: "local" } : { ok: false, error: "wrong password" };
     }
-    const p = hits[0];
-    if (!prompt.test(p.year)) return { pts: 0, tier: null, person: p, status: `wrong class: started ${p.year}` };
-    return { pts: window.TIERS[p.tier].pts, tier: p.tier, person: p, status: "" };
+    const plays = ls.get("bh:plays", []);
+    const row = plays.find((p) => p.date === b.date && norm(p.player) === norm(b.player));
+    if (b.action === "start") {
+      if (row && row.answers.length) return { ok: false, error: "already played today" };
+      if (!row) { plays.push({ date: b.date, player: b.player, answers: [] }); ls.set("bh:plays", plays); return { ok: true, fresh: true }; }
+      return { ok: true, fresh: false };
+    }
+    if (b.action === "play") {
+      if (row && row.answers.length) return { ok: false, error: "already played today" };
+      if (row) row.answers = b.answers; else plays.push({ date: b.date, player: b.player, answers: b.answers });
+      ls.set("bh:plays", plays); return { ok: true };
+    }
+    if (b.action === "appeal") {
+      const ap = ls.get("bh:appeals", []);
+      if (ap.some((a) => a.date === b.date && norm(a.player) === norm(b.player))) return { ok: false, error: "one appeal per day" };
+      ap.push({ date: b.date, player: b.player, prompt: b.prompt, typed: b.typed, tier: "", year: "" }); ls.set("bh:appeals", ap);
+      return { ok: true };
+    }
+    if (b.action === "login" || b.action === "rank") return { ok: false, error: "admin needs the backend deployed" };
+    return { ok: false, error: "unknown" };
   }
 
-  // ---------- field ----------
-  const X0 = 100, YD = 10; // own goal line at x=100, 10px per yard
-  (function drawLines() {
-    const g = $("#lines");
-    for (let y = 0; y <= 100; y += 10) {
-      const x = X0 + y * YD;
-      g.insertAdjacentHTML("beforeend", `<line x1="${x}" y1="0" x2="${x}" y2="300"/>`);
-      if (y > 0 && y < 100) g.insertAdjacentHTML("beforeend", `<text x="${x + 4}" y="22">${y}</text>`);
-    }
-  })();
-  const disc = $("#disc");
-  let laneY = 50;
-  function huck(yards, color) {
-    return new Promise((done) => {
-      const sx = X0, sy = 150;
-      const ex = yards >= 100 ? 1150 : X0 + yards * YD;
-      const ey = laneY; laneY = laneY >= 250 ? 50 : laneY + 33;
-      const cx = (sx + ex) / 2, cy = Math.min(sy, ey) - 40 - yards * 0.9;
-      const path = `M${sx},${sy} Q${cx},${cy} ${ex},${ey}`;
-      const t0 = performance.now(), dur = 500 + yards * 9;
-      (function step(t) {
-        const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 2);
-        const x = (1 - e) ** 2 * sx + 2 * (1 - e) * e * cx + e * e * ex;
-        const y = (1 - e) ** 2 * sy + 2 * (1 - e) * e * cy + e * e * ey;
-        disc.setAttribute("cx", x); disc.setAttribute("cy", y);
-        if (k < 1) return requestAnimationFrame(step);
-        $("#trails").insertAdjacentHTML("beforeend",
-          `<path d="${path}" stroke="${color}"/><circle cx="${ex}" cy="${ey}" r="9" fill="${color}"/>`);
-        disc.setAttribute("cx", X0); disc.setAttribute("cy", 150);
-        done();
-      })(t0);
+  // ---------- roster (base + ranked appeals) ----------
+  let people = [];
+  const mk = (p, i) => ({ ...p, id: i, first: norm(p.full).split(" ")[0], key: norm(p.full) });
+  function buildRoster() {
+    const base = window.ROSTER.map(([full, tier, year, note], i) => mk({ full, tier, years: yearsOf(year), note }, i));
+    people = base;
+    remote.appeals.forEach((a) => {
+      const k = norm(a.typed);
+      if (!k || !a.tier || a.tier === "reject" || !T[a.tier] || !yearsOf(a.year).length) return;
+      if (people.some((p) => p.key === k) || candidates(k).length) return; // a typo or nickname of someone already listed
+      people.push(mk({ full: String(a.typed).trim().replace(/\b\w/g, (c) => c.toUpperCase()), tier: a.tier, years: yearsOf(a.year), viaAppeal: true }, people.length));
     });
   }
-  function redrawTrails(results) {
-    $("#trails").innerHTML = ""; laneY = 50;
+  const exactOf = (text) => { const k = norm(text); return k ? people.find((p) => p.key === k) : undefined; };
+  // Edit distance where swapping two neighboring letters counts as one typo ("gaivn" -> "gavin").
+  function lev(a, b) {
+    const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++)
+      for (let j = 1; j <= b.length; j++) {
+        d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    return d[a.length][b.length];
+  }
+  // Strict autocorrect, run only when the player presses enter on something that is not an exact
+  // full name. It never completes partial words. It only fixes:
+  //   - a complete first name ("luke" -> Luke Sellers), and
+  //   - one typo (one wrong, missing, extra or swapped letter) in a first or full name of 4+ letters.
+  // Whatever it picks is written into the box; the player presses enter again to throw.
+  function candidates(text) {
+    const q = norm(text), multi = q.includes(" ");
+    if (!q) return [];
+    const first = multi ? [] : people.filter((p) => p.first === q);
+    if (first.length) return first;
+    if (q.length < 4) return [];
+    return people.filter((p) => lev(q, p.key) <= 1 || (!multi && p.first.length >= 4 && lev(q, p.first) <= 1));
+  }
+  const byValue = (x, y) => T[x.tier].pts - T[y.tier].pts || x.full.localeCompare(y.full);
+
+  // ---------- scoring ----------
+  // One answer against today's roster (so ranked appeals apply retroactively).
+  function score(ans, k) {
+    const prompt = P[k];
+    if (!prompt || !ans || typeof ans !== "object") return { pts: 0, status: "no answer" };
+    const p = exactOf(ans.full || ans.typed);
+    if (!p) return { pts: 0, status: ans.reused ? `${ans.reused} was already used` : ans.typed ? "not on the list" : "no answer" };
+    if (!p.years.some(prompt.test)) return { pts: 0, person: p, status: `wrong class: started ${p.years.join(" or ")}` };
+    return { pts: T[p.tier].pts, tier: p.tier, person: p };
+  }
+  // A round scored against everyone the player had already used. A teammate counts once per
+  // player, ever, even when an appeal makes an old answer valid later.
+  function scoreRound(answers, used) {
+    return (Array.isArray(answers) ? answers.slice(0, P.length) : []).map((a, k) => {
+      const r = score(a, k);
+      if (!r.person) return r;
+      if (used.has(r.person.key)) return { pts: 0, person: r.person, status: `${r.person.full} was already used` };
+      used.add(r.person.key);
+      return r;
+    });
+  }
+  const sum = (rs) => rs.reduce((s, r) => s + r.pts, 0);
+  const playsOf = (player) => remote.plays.filter((pl) => norm(pl.player) === norm(player)).sort((a, b) => dayIndex(a.date) - dayIndex(b.date));
+  // Every round this player has thrown, in date order, with one running "used" set.
+  function history(player) {
+    const used = new Set(), rounds = [];
+    playsOf(player).forEach((pl) => { const before = new Set(used); rounds.push({ date: pl.date, answers: pl.answers || [], before, results: scoreRound(pl.answers, used) }); });
+    return { used, rounds };
+  }
+  const usedBefore = (player, date) => {
+    const r = history(player).rounds.find((x) => x.date === date);
+    return r ? new Set(r.before) : history(player).used;
+  };
+  function streak(player) {
+    const days = new Set(playsOf(player).filter((p) => (p.answers || []).length).map((p) => dayIndex(p.date)));
+    let d = dayIndex(dayKey); if (!days.has(d)) d -= 1;
+    let n = 0; while (days.has(d)) { n++; d--; }
+    return n;
+  }
+
+  // ---------- field: a drive that scrolls between fixed end zones ----------
+  // A regulation field is a 70-yard playing field between two 20-yard end zones. Points turn into
+  // yards (100 pts = the full 70), each throw starts where the last one was caught, and the turf
+  // scrolls under the disc so the end zones never move. Every 100 points is a goal.
+  const FIELD = 70, YD = 1200 / 110, G0 = 20 * YD, G1 = G0 + FIELD * YD, MID = 150;
+  const yardsFor = (pts) => (pts >= 100 ? FIELD + 10 : Math.round(pts * 0.7));
+  const svgNS = "http://www.w3.org/2000/svg";
+  const disc = $("#disc");
+  let offset = 0, throws = [], lastY = MID, laneN = 0;
+  const xAt = (abs) => G0 + (abs - offset) * YD;
+  const nextLane = () => [70, 230, 110, 190, 150, 50, 250][laneN++ % 7];
+  function arcOf(t) {
+    const x1 = xAt(t.from), x2 = xAt(t.to), span = t.to - t.from;
+    return { x1, y1: t.fy, x2, y2: t.ty, cx: (x1 + x2) / 2, cy: Math.max(Math.min(t.fy, t.ty) - 30 - span * 1.4, 30 - Math.sqrt((t.fy - 30) * (t.ty - 30))) }; // peak stays inside the field
+  }
+  function drawField() {
+    let turf = "", lines = "";
+    const small = matchMedia("(max-width: 520px)").matches, ly = small ? 48 : 26, room = small ? 6 : 3;
+    for (let b = Math.floor(offset / 10); b * 10 < offset + FIELD; b++) // 10-yard turf bands
+      turf += `<rect x="${xAt(b * 10)}" y="0" width="${10 * YD + 0.5}" height="300" class="${b % 2 ? "band-b" : "band-a"}"/>`;
+    for (let y = Math.ceil(offset / 10) * 10; y < offset + FIELD; y += 10) {
+      if (y === offset) continue;
+      const x = xAt(y);
+      lines += `<line x1="${x}" y1="0" x2="${x}" y2="300"/>` + (y <= offset + FIELD - room ? `<text x="${x + 6}" y="${ly}">${y}</text>` : "");
+    }
+    $("#turf").innerHTML = turf;
+    $("#lines").innerHTML = lines;
+    $("#trails").innerHTML = throws.map((t) => {
+      const a = arcOf(t), d = `M${a.x1},${a.y1} Q${a.cx},${a.cy} ${a.x2},${a.y2}`;
+      return `<path class="under" d="${d}"/><path d="${d}" stroke="${t.color}"/><circle cx="${a.x2}" cy="${a.y2}" r="10" fill="${t.color}"/>`;
+    }).join("");
+  }
+  const ease = (k) => 1 - (1 - k) ** 3;
+  const animate = (ms, fn) => new Promise((done) => {
+    const t0 = performance.now();
+    (function step(t) { const k = Math.min(1, (t - t0) / ms); fn(ease(k)); if (k < 1) requestAnimationFrame(step); else done(); })(t0);
+  });
+  function placeDisc(x, y) { disc.setAttribute("cx", x); disc.setAttribute("cy", y); }
+  function flashGoal() {
+    const ez = $("#ezFar"); ez.classList.remove("scored"); void ez.getBoundingClientRect(); ez.classList.add("scored");
+  }
+  // Throw from the current catch point, then scroll the turf so the catch becomes the new release.
+  async function huck(pts, color, before) {
+    const yds = yardsFor(pts), t = { from: offset, fy: lastY, to: offset + yds, ty: pts >= 100 ? MID : nextLane(), color };
+    const a = arcOf(t);
+    await animate(450 + yds * 12, (e) => placeDisc(
+      (1 - e) ** 2 * a.x1 + 2 * (1 - e) * e * a.cx + e * e * a.x2,
+      (1 - e) ** 2 * a.y1 + 2 * (1 - e) * e * a.cy + e * e * a.y2));
+    throws.push(t); drawField();
+    if (Math.floor((before + pts) / 100) > Math.floor(before / 100)) flashGoal();
+    const from = offset;
+    await animate(520, (e) => { offset = from + (t.to - from) * e; drawField(); placeDisc(xAt(t.to), t.ty); });
+    lastY = t.ty;
+  }
+  function resetField(results = []) {
+    offset = 0; throws = []; lastY = MID; laneN = 0;
     results.forEach((r) => {
       if (!r.pts) return;
-      const ex = r.pts >= 100 ? 1150 : X0 + r.pts * YD, ey = laneY; laneY = laneY >= 250 ? 50 : laneY + 33;
-      const cx = (X0 + ex) / 2, cy = Math.min(150, ey) - 40 - r.pts * 0.9, col = window.TIERS[r.tier].color;
-      $("#trails").insertAdjacentHTML("beforeend",
-        `<path d="M${X0},150 Q${cx},${cy} ${ex},${ey}" stroke="${col}"/><circle cx="${ex}" cy="${ey}" r="9" fill="${col}"/>`);
+      const t = { from: offset, fy: lastY, to: offset + yardsFor(r.pts), ty: r.pts >= 100 ? MID : nextLane(), color: T[r.tier].color };
+      throws.push(t); offset = t.to; lastY = t.ty;
     });
+    drawField(); placeDisc(G0, lastY);
+    paintTally(sum(results));
   }
-  const setTotal = (n) => ($("#total").textContent = n);
+  function paintTally(pts) {
+    $("#total").textContent = pts;
+    const g = Math.floor(pts / 100);
+    $("#goals").textContent = g ? `${g} goal${g > 1 ? "s" : ""}` : "";
+  }
+  (function brickMarks() { // fixed to the end zones, so they never scroll
+    const g = $("#bricks");
+    [G0 + 20 * YD, G1 - 20 * YD].forEach((x) => {
+      const p = document.createElementNS(svgNS, "path");
+      p.setAttribute("d", `M${x - 8},${MID - 8} l16,16 M${x + 8},${MID - 8} l-16,16`); g.appendChild(p);
+    });
+  })();
+  resetField();
 
-  // ---------- legend / how ----------
-  $("#legend").innerHTML = Object.values(window.TIERS)
-    .map((t) => `<div><b style="background:${t.color}"></b>${t.label} · ${t.pts} yds</div>`).join("");
+  // ---------- nav ----------
+  const legendHTML = Object.values(T).map((t) => `<div><b style="background:${t.color}"></b><span>${t.label} · ${t.pts}</span></div>`).join("");
+  $("#legend").innerHTML = legendHTML;
   $("#howBtn").onclick = () => $("#how").showModal();
+  $("#boardBtn").onclick = () => board();
 
-  // ---------- screens ----------
-  function intro() {
-    setTotal(0);
-    stage.innerHTML = `
+  // ---------- session ----------
+  let me = ls.get("bh:session", null); // {player, token}
+  const draftKey = () => `bh:draft:${dayKey}:${norm(me.player)}`;
+  const clockKey = () => `bh:clock:${dayKey}:${norm(me.player)}`;
+  const playedCookie = () => decodeURIComponent((document.cookie.match(/(?:^|; )bh_played=([^;]*)/) || [])[1] || "");
+  const setPlayedCookie = () => {
+    document.cookie = `bh_played=${encodeURIComponent(dayKey + "|" + me.player)}; max-age=${60 * 60 * 36}; path=/; SameSite=Lax`;
+  };
+  const signOut = () => { me = null; ls.del("bh:session"); auth(); };
+
+  function auth(msg = "") {
+    resetField();
+    show(`
       <div class="card">
-        <p class="kicker">HUCK #${dayNum}${practice ? " · PRACTICE" : ""}</p>
-        <p class="prompt">Name a BatCH teammate from each starting class. Obvious picks float. <em>Rare ones go deep.</em></p>
-        <div class="legend">${$("#legend").innerHTML}</div>
-        <div class="row"><button class="btn" id="go" type="button">▶ pull</button></div>
-      </div>`;
-    $("#go").onclick = () => play([]);
+        <p class="kicker">BATCHILLION #${dayNum()}</p>
+        <p class="prompt">Who's throwing?</p>
+        <form id="af" class="stack" autocomplete="on">
+          <input type="text" id="an" placeholder="your name" aria-label="your name" autocomplete="username" required maxlength="40">
+          <input type="password" id="ap" placeholder="password (any, even blank)" aria-label="password" autocomplete="current-password">
+          <div class="row">
+            <button class="btn" type="submit" data-act="signin">sign in</button>
+            <button class="btn ghost" type="submit" data-act="register">create account</button>
+          </div>
+        </form>
+        <p class="hint" id="am" aria-live="polite">${esc(msg)}</p>
+        <div class="legend">${legendHTML}</div>
+      </div>`);
+    $("#an").focus();
+    $("#af").onsubmit = async (e) => {
+      e.preventDefault();
+      const act = e.submitter?.dataset.act || "signin", name = $("#an").value.trim();
+      $("#am").textContent = act === "register" ? "creating account…" : "signing in…";
+      const r = await post({ action: act, player: name, password: $("#ap").value });
+      if (!r.ok && (r.noAccount || r.error === "no account")) {
+        $("#am").innerHTML = `no account called ${esc(name)} yet. <button class="linkish" id="mk" type="button">create it</button>`;
+        $("#mk").onclick = () => $("#af").requestSubmit(stage.querySelector('[data-act="register"]'));
+        return;
+      }
+      if (!r.ok) { $("#am").textContent = r.error; return; }
+      me = { player: r.player, token: r.token }; ls.set("bh:session", me);
+      home();
+    };
   }
 
+  function offlineCard(retry) {
+    show(`<div class="card"><p class="kicker">BATCHILLION #${dayNum()}</p><p class="prompt">Can't reach the field.</p>
+      <p class="hint">The leaderboard server didn't answer, so the round can't start (it would forget who you've already used).</p>
+      <div class="row"><button class="btn" id="retry" type="button">try again</button></div></div>`);
+    $("#retry").onclick = retry;
+  }
+
+  async function home() {
+    if (!me) return auth();
+    if (!(await pull())) return offlineCard(home);
+    buildRoster();
+    const mine = remote.plays.find((p) => p.date === dayKey && norm(p.player) === norm(me.player));
+    const draft = practice ? [] : ls.get(draftKey(), []) || [];
+    if (!practice && mine && (mine.answers || []).length) { ls.del(draftKey()); ls.del(clockKey()); return finish(true); }
+    if (!practice && draft.length === P.length) return submitRound(draft); // finished but never reached the server
+    const ck = playedCookie();
+    if (!practice && ck.startsWith(dayKey + "|") && norm(ck.split("|").slice(1).join("|")) !== norm(me.player))
+      return auth(`this device already played today as ${ck.split("|").slice(1).join("|")}. come back tomorrow.`);
+    if (!practice && mine && !draft.length && !ls.get(clockKey(), null))
+      return lockedOut(); // started on another device or browser and abandoned there
+    if (!practice && (draft.length || ls.get(clockKey(), null))) return play(draft);
+    resetField();
+    const h = history(me.player), st = streak(me.player);
+    show(`
+      <div class="card">
+        <p class="kicker">BATCHILLION #${dayNum()}${practice ? " · PRACTICE" : ""}${st ? ` · STREAK ${st}` : ""}</p>
+        <p class="prompt">You're up, <em>${esc(me.player)}</em>. Name a teammate from each starting class. Rarer ones fly farther.</p>
+        <p class="hint">${h.used.size ? `${h.used.size} teammate${h.used.size > 1 ? "s" : ""} already used by you. They're gone for good.` : "Once you name a teammate, you can never name them again."}</p>
+        <div class="row">
+          <button class="btn" id="go" type="button">pull</button>
+          <button class="btn ghost" id="out" type="button">not ${esc(me.player)}? sign out</button>
+        </div>
+      </div>`);
+    $("#go").focus();
+    $("#go").onclick = async () => {
+      if (!practice) {
+        $("#go").disabled = true;
+        if (ls.get(clockKey(), null) || (ls.get(draftKey(), []) || []).length) return home(); // another tab here already started
+        // iOS only raises the keyboard for focus() inside the tap itself, so hold it with a stand-in box.
+        const proxy = Object.assign(document.createElement("input"), { type: "text" });
+        proxy.style.cssText = "position:fixed;top:0;left:0;opacity:0;height:0;font-size:16px";
+        document.body.appendChild(proxy); proxy.focus();
+        // Claim the round on this device first, so a lost reply resumes instead of forfeiting.
+        ls.set(clockKey(), { i: 0, t0: Date.now() });
+        const r = await post({ action: "start", date: dayKey, player: me.player, token: me.token });
+        if (!r.ok) {
+          proxy.remove();
+          if (r.net) return offlineCard(home);
+          ls.del(clockKey());
+          if (r.error === "sign in again") return signOut();
+          toast(r.error); return home();
+        }
+        ls.del(clockKey()); // the 30 seconds start when the prompt appears
+        if (!r.fresh) { proxy.remove(); return lockedOut(); }
+        play([]); proxy.remove(); return;
+      }
+      play([]);
+    };
+    $("#out").onclick = signOut;
+  }
+
+  async function lockedOut() {
+    const r = await post({ action: "play", forfeit: true, date: dayKey, player: me.player, token: me.token, answers: Array(P.length).fill({ typed: "", full: null }) });
+    if (r.live) {
+      show(`<div class="card"><p class="kicker">BATCHILLION #${dayNum()}</p><p class="prompt">Your round is live on another device.</p>
+        <p class="hint">Finish it there. If you left it, it counts as thrown after 15 minutes.</p>
+        <div class="row"><button class="btn" id="retry" type="button">refresh</button></div></div>`);
+      $("#retry").onclick = home; return;
+    }
+    if (r.ok || r.error === "already played today") {
+      setPlayedCookie();
+      if (!(await pull(true))) return offlineCard(home);
+      buildRoster(); return finish(true, "You started today's round somewhere else and left it. It counts as thrown.");
+    }
+    offlineCard(home);
+  }
+
+  // ---------- one prompt ----------
   function play(answers) {
     const i = answers.length;
-    if (i === window.PROMPTS.length) return finish(answers);
-    const prompt = window.PROMPTS[i];
-    let left = SECONDS, picked = null, locked = false;
-    stage.innerHTML = `
+    if (i >= P.length) return submitRound(answers);
+    const prior = practice ? new Set() : usedBefore(me.player, dayKey);
+    const results = scoreRound(answers, new Set(prior));
+    const used = new Set(prior); results.forEach((r) => r.person && used.add(r.person.key));
+    resetField(results);
+    // The clock lives in storage, so reloading mid-prompt does not buy a fresh 30 seconds.
+    let clock = practice ? null : ls.get(clockKey(), null);
+    if (!clock || clock.i !== i) { clock = { i, t0: Date.now() }; if (!practice) ls.set(clockKey(), clock); }
+    const deadline = clock.t0 + SECONDS * 1000;
+    let locked = false, lastReject = "";
+    const left = people.filter((p) => p.years.some(P[i].test) && !used.has(p.key)).length;
+    show(`
       <div class="card">
-        <p class="kicker">PROMPT ${i + 1} / ${window.PROMPTS.length}</p>
-        <p class="prompt">Name a BatCH teammate <em>${prompt.text}</em></p>
-        <div class="timer" id="tm"><i></i></div>
+        <p class="kicker">PROMPT ${i + 1} / ${P.length} · ${left} LEFT FOR YOU</p>
+        <p class="prompt">Name a BatCH teammate <em>${esc(P[i].text)}</em></p>
+        <div class="clock" id="clk"><span class="secs" id="secs">${SECONDS}</span><div class="timer" id="tm"><i></i></div></div>
         <form class="row" id="f" autocomplete="off">
-          <input type="text" id="in" placeholder="first name…" aria-label="teammate name" autofocus>
+          <input type="text" id="in" placeholder="name…" aria-label="teammate name" autocapitalize="words" autocorrect="off" spellcheck="false" maxlength="60">
           <button class="btn" type="submit">huck it</button>
         </form>
-        <div class="hint" id="hint"></div>
-        <div class="chips" id="chips"></div>
-      </div>`;
-    const input = $("#in"), hint = $("#hint"), chips = $("#chips");
+        <div class="hint" id="hint" aria-live="polite"></div>
+      </div>`);
+    const input = $("#in"), hint = $("#hint");
+    $("#boardBtn").disabled = true; // leaving mid-prompt would lose it
+    if (!left) hint.textContent = "nobody left in this class for you. try a name you know is missing (you can appeal it), or wait for the buzzer.";
     input.focus();
+    // No hints while typing: autocorrect only happens when the player presses enter.
+    input.oninput = () => { hint.textContent = ""; };
 
-    input.oninput = () => {
-      picked = null; chips.innerHTML = "";
-      const hits = lookup(input.value);
-      if (hits.length === 1) hint.textContent = `↵ ${hits[0].full}`;
-      else if (hits.length > 1) {
-        hint.textContent = "more than one teammate has that name, pick one:";
-        chips.innerHTML = hits.map((p) => `<button type="button" class="chip" data-id="${p.id}">${p.full}</button>`).join("");
-        chips.querySelectorAll(".chip").forEach((b) => (b.onclick = () => { picked = people[+b.dataset.id]; submit(); }));
-      } else hint.textContent = "";
-    };
-
-    const timer = setInterval(() => {
-      left -= 1;
-      $("#tm i").style.width = `${(left / SECONDS) * 100}%`;
-      $("#tm").classList.toggle("low", left <= 5);
+    function tick() {
+      const bar = $("#tm i"); if (!bar) return stopTimer();
+      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      bar.style.width = `${(left / SECONDS) * 100}%`;
+      $("#secs").textContent = left;
+      $("#clk").classList.toggle("low", left <= 5);
       if (left <= 0) submit(true);
-    }, 1000);
-
-    function submit(timedOut) {
-      if (locked) return;
-      const hits = picked ? [picked] : lookup(input.value);
-      if (!timedOut && hits.length > 1) { input.oninput(); return; } // make them pick
-      locked = true; clearInterval(timer);
-      const typed = input.value.trim();
-      const ans = hits.length === 1 ? { typed, full: hits[0].full, pid: hits[0].id } : { typed, full: null, pid: null, appeal: false };
-      reveal(answers, ans, prompt);
     }
     $("#f").onsubmit = (e) => { e.preventDefault(); submit(false); };
+    stopTimer(); activeTimer = setInterval(tick, 250); tick();
+
+    // Enter either catches or it doesn't. A miss clears the box and the clock keeps running;
+    // only a catch (or the buzzer) ends the prompt.
+    function drop(msg) { input.value = ""; hint.textContent = msg; input.focus(); }
+    function submit(timedOut) {
+      if (locked) return;
+      const raw = input.value.trim(), ex = exactOf(raw);
+      const catches = ex && !used.has(ex.key) && ex.years.some(P[i].test);
+      if (!timedOut) {
+        if (!raw) return;
+        if (!ex) {
+          // Several fits ("peter" -> Peter C, Peter D): correct to the least valuable one still
+          // available. Anyone who wants the other has to type that full name themselves.
+          const all = candidates(raw), c = all.filter((p) => !used.has(p.key)).sort(byValue);
+          if (c.length) { input.value = c[0].full; hint.textContent = `autocorrected to ${c[0].full}. press enter again to huck it`; return; }
+          if (all.length) return drop(`${all.map((p) => p.full).join(", ")}: already used. pick someone else`);
+          lastReject = raw; // kept so it can be appealed after the round
+          return drop(`"${raw}" isn't on the roster. try again`);
+        }
+        if (used.has(ex.key)) return drop(`${ex.full} is already used. ever. pick someone else`);
+        if (!catches) return drop(`${ex.full} didn't start ${P[i].short}. try again`);
+      }
+      locked = true; stopTimer();
+      const offRoster = raw && !ex && !candidates(raw).length;
+      const ans = catches ? { typed: raw, full: ex.full } : { typed: offRoster ? raw : lastReject, full: null };
+      if (!practice) ls.del(clockKey());
+      reveal([...answers, ans], sum(results));
+    }
   }
 
-  async function reveal(answers, ans, prompt) {
-    const r = score(ans, prompt);
-    const all = [...answers, ans];
-    store.set({ answers: all, done: all.length === window.PROMPTS.length });
-    if (r.pts) await huck(r.pts, window.TIERS[r.tier].color);
-    setTotal(all.reduce((s, a, k) => s + score(a, window.PROMPTS[k]).pts, 0));
-    const t = r.tier && window.TIERS[r.tier];
-    const missing = ans.typed && !r.person;
-    stage.innerHTML = `
-      <div class="card result">
-        <p class="kicker">PROMPT ${answers.length + 1} / ${window.PROMPTS.length}</p>
-        <p class="who">${r.person ? r.person.full : ans.typed || "no answer"}</p>
-        ${t ? `<span class="tier" style="background:${t.color}">${t.label}</span>
-               <p class="yds">${t.pts} yds</p><p class="cap">${typeof t.caption === "function" ? t.caption() : t.caption}</p>`
-            : `<p class="yds">0 yds</p><p class="cap">${r.status}</p>`}
-        <div class="row">
-          ${missing ? `<button class="btn ghost" id="appeal" type="button">appeal to ${window.APPEAL.who}</button>` : ""}
-          <button class="btn" id="next" type="button">${answers.length + 1 === window.PROMPTS.length ? "see your hucks" : "next pull"}</button>
-        </div>
-      </div>`;
-    if (missing) $("#appeal").onclick = () => appeal(all, all.length - 1);
+  async function reveal(all, before) {
+    const k = all.length - 1, ans = all[k];
+    if (!practice) ls.set(draftKey(), all);
+    const prior = practice ? new Set() : usedBefore(me.player, dayKey);
+    const r = scoreRound(all, new Set(prior))[k];
+    const h = stage.offsetHeight;
+    show(`<div class="card" style="min-height:${h}px"><p class="kicker">PROMPT ${all.length} / ${P.length}</p><p class="prompt">${r.pts ? "up it goes…" : "turnover."}</p></div>`);
+    const mine = nav;
+    if (r.pts) await huck(r.pts, T[r.tier].color, before);
+    if (nav !== mine) return; // the player moved on mid-throw
+    paintTally(before + r.pts);
+    const t = r.tier && T[r.tier];
+    const cap = t ? (typeof t.caption === "function" ? t.caption() : t.caption) + (r.person.note ? ` · ${r.person.note}` : "") : "";
+    const last = all.length === P.length;
+    const goal = t && Math.floor((before + r.pts) / 100) > Math.floor(before / 100);
+    show(`
+      <div class="card result${t ? "" : " miss"}" role="status" style="--c:${t ? t.color : "var(--graphite)"}">
+        <p class="kicker">PROMPT ${all.length} / ${P.length}${goal ? " · GOAL" : ""}</p>
+        <p class="who">${esc(r.person ? r.person.full : ans.typed || ans.reused || "no answer")}</p>
+        ${t ? `<span class="tier">${esc(t.label)}</span><p class="yds">${t.pts} <small>pts · ${yardsFor(t.pts) > FIELD ? "caught in the end zone" : yardsFor(t.pts) + " yds"}</small></p><p class="cap">${esc(cap)}</p>`
+            : `<p class="yds">0 <small>pts</small></p><p class="cap">${esc(window.ZERO_CAPTION)}</p><p class="small">${esc(r.status)}${ans.typed && !r.person ? " · you can appeal one name at the end" : ""}</p>`}
+        <div class="row"><button class="btn" id="next" type="button">${last ? "see your drive" : "next pull"}</button></div>
+      </div>`);
+    $("#next").focus();
     $("#next").onclick = () => play(all);
   }
 
-  function appeal(all, k) {
-    all[k].appeal = true;
-    store.set({ answers: all, done: all.length === window.PROMPTS.length });
-    const body = `BatCH Hucks appeal: "${all[k].typed}" for "${window.PROMPTS[k].text}". Please rank them.`;
-    toast("appeal sent. your score updates once they're ranked");
-    location.href = `sms:${window.APPEAL.sms}?&body=${encodeURIComponent(body)}`;
-    const b = $("#appeal"); if (b) { b.disabled = true; b.textContent = "appeal sent"; }
+  async function submitRound(answers) {
+    if (practice) return finish(false, "", answers);
+    show(`<div class="card"><p class="kicker">BATCHILLION #${dayNum()}</p><p class="prompt">Sending your drive…</p></div>`);
+    const r = await post({ action: "play", date: dayKey, player: me.player, token: me.token, answers });
+    if (r.ok || r.error === "already played today") {
+      setPlayedCookie(); ls.del(draftKey()); ls.del(clockKey());
+      if (!(await pull(true))) return offlineCard(home);
+      buildRoster();
+      return finish(false);
+    }
+    if (r.error === "sign in again") { me = null; ls.del("bh:session"); return auth("session expired. sign in again; your round is saved on this device and will send."); }
+    // Keep the round on this device and let the player resend it. Nothing is lost.
+    show(`<div class="card"><p class="kicker">BATCHILLION #${dayNum()}</p><p class="prompt">Your drive didn't reach the server.</p>
+      <p class="hint">${esc(r.error || "unknown error")}. It's saved on this device.</p>
+      <div class="row"><button class="btn" id="resend" type="button">resend</button></div></div>`);
+    $("#resend").onclick = () => submitRound(answers);
   }
 
-  function finish(answers) {
-    const results = answers.map((a, k) => ({ a, k, ...score(a, window.PROMPTS[k]) }));
-    const total = results.reduce((s, r) => s + r.pts, 0);
-    setTotal(total); redrawTrails(results);
-    store.set({ answers, done: true });
-    const squares = { plankton: "⬜", clever: "🟫", schooler: "🟦", rare: "🟥", deep: "🟪", krillion: "🟨" };
-    const share = `BatCH Hucks #${dayNum} 🥏 ${total} yds\n` + results.map((r) => (r.tier ? squares[r.tier] : "⬛")).join("");
-    stage.innerHTML = `
+  // ---------- recap + appeal ----------
+  const VERDICTS = [ // the day's total, on the same 0-700 scale as krillion
+    [450, "Caught in the end zone. Callahan behavior."],
+    [351, "Huck to space. The sideline is losing it."],
+    [251, "Past the brick. Real yards."],
+    [151, "Swing, swing, dump. Gets the disc moving."],
+    [0, "Turf. The disc barely left your hand."],
+  ];
+  const SQUARES = { plankton: "⬜", clever: "🟫", schooler: "🟦", rare: "🟥", deep: "🟪", krillion: "🟨" };
+
+  function finish(returning, note = "", practiceAnswers = null) {
+    const round = practiceAnswers ? { answers: practiceAnswers, results: scoreRound(practiceAnswers, new Set()) }
+      : history(me.player).rounds.find((x) => x.date === dayKey) || { answers: [], results: [] };
+    const res = round.results.map((r, k) => ({ ...r, a: round.answers[k] || {}, k }));
+    resetField(round.results);
+    const tot = sum(round.results), goals = Math.floor(tot / 100);
+    const verdict = VERDICTS.find(([m]) => tot >= m)[1];
+    const myAppeal = remote.appeals.find((a) => a.date === dayKey && norm(a.player) === norm(me.player));
+    const url = location.origin + location.pathname;
+    const share = `Batchillion #${dayNum()} 🥏 ${tot}${goals ? ` (${goals} goal${goals > 1 ? "s" : ""})` : ""}\n${res.map((r) => (r.tier ? SQUARES[r.tier] : "⬛")).join("")}\n${url}`;
+    const appealable = (r) => !practiceAnswers && !myAppeal && !r.person && r.a.typed && norm(r.a.typed).replace(/ /g, "").length >= 2 && !candidates(r.a.typed).length;
+    const st = streak(me.player);
+    show(`
       <div class="card">
-        <p class="kicker">HUCK #${dayNum} · FINAL</p>
-        <p class="prompt"><em>${total}</em> yards downfield</p>
-        <ul class="recap">${results.map((r) => {
-          const t = r.tier && window.TIERS[r.tier];
-          return `<li style="--c:${t ? t.color : "#444"}">
-            <div><div class="q">${window.PROMPTS[r.k].text}</div>
-            <div class="a">${r.person ? r.person.full : r.a.typed || "no answer"} ${t ? "· " + t.label : `<span class="pending">· ${r.status}</span>`}</div></div>
+        <p class="kicker">BATCHILLION #${dayNum()} · ${returning ? "YOU ALREADY THREW TODAY" : "FINAL"}${st ? ` · STREAK ${st}` : ""}</p>
+        <p class="prompt"><em>${tot}</em> points${goals ? ` · ${goals} goal${goals > 1 ? "s" : ""}` : ""}</p>
+        <p class="verdict">${esc(verdict)}</p>
+        ${note ? `<p class="hint">${esc(note)}</p>` : ""}
+        <ul class="recap">${res.map((r) => {
+          const t = r.tier && T[r.tier];
+          const ap = myAppeal && Number(myAppeal.prompt) === r.k ? `<span class="pending">appeal ${myAppeal.tier ? (myAppeal.tier === "reject" ? "rejected" : "ranked") : "pending"}</span>` : "";
+          return `<li style="--c:${t ? t.color : "var(--graphite)"}">
+            <div><div class="q">${esc(P[r.k].text)}</div>
+            <div class="a">${esc(r.person ? r.person.full : r.a.typed || "no answer")} <span class="tag">${t ? esc(t.label) : esc(r.status)}</span> ${ap}</div>
+            ${appealable(r) ? `<button class="chip" data-appeal="${r.k}" type="button">appeal this name</button>` : ""}</div>
             <div class="p">${r.pts}</div></li>`;
         }).join("")}</ul>
+        ${res.some(appealable) ? `<p class="hint">You get one appeal a day. ${esc(window.APPEAL_WHO)} ranks it and your score updates.</p>` : ""}
+        <p class="hint" id="reset"></p>
         <div class="row">
-          <button class="btn" id="share" type="button">copy result</button>
-          ${practice ? `<button class="btn ghost" id="again" type="button">practice again</button>` : ""}
+          <button class="btn" id="share" type="button">share result</button>
+          <button class="btn ghost" id="lb" type="button">leaderboard</button>
+          ${practiceAnswers ? `<button class="btn ghost" id="again" type="button">practice again</button>` : ""}
         </div>
-      </div>`;
-    $("#share").onclick = async () => {
-      try { await navigator.clipboard.writeText(share); toast("copied"); }
-      catch { prompt("copy this:", share); }
+      </div>`);
+    // Countdown to the next midnight Eastern.
+    const resetEl = $("#reset");
+    const paintReset = () => {
+      const nowEt = new Date(new Date(nowMs()).toLocaleString("en-US", { timeZone: ZONE }));
+      const ms = (24 * 3600 - (nowEt.getHours() * 3600 + nowEt.getMinutes() * 60 + nowEt.getSeconds())) * 1000;
+      const hh = Math.floor(ms / 3.6e6), mm = Math.floor((ms % 3.6e6) / 6e4);
+      resetEl.textContent = `next pull in ${hh}h ${mm}m (midnight Eastern)`;
     };
-    if (practice) $("#again").onclick = () => { $("#trails").innerHTML = ""; intro(); };
+    paintReset(); stopTimer(); activeTimer = setInterval(() => (resetEl.isConnected ? paintReset() : stopTimer()), 30000);
+    stage.querySelectorAll("[data-appeal]").forEach((b) => (b.onclick = async () => {
+      const k = +b.dataset.appeal;
+      b.disabled = true; b.textContent = "sending…";
+      const r = await post({ action: "appeal", date: dayKey, player: me.player, token: me.token, prompt: k, typed: round.answers[k].typed });
+      if (!r.ok) { toast(r.error); b.textContent = "appeal this name"; b.disabled = false; return; }
+      toast(API ? `appeal sent to ${window.APPEAL_WHO}` : "saved locally (backend not connected yet)");
+      await pull(true); buildRoster(); finish(returning, note);
+    }));
+    $("#share").onclick = async () => {
+      if (navigator.share) { try { await navigator.share({ text: share }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+      try { await navigator.clipboard.writeText(share); toast("copied"); }
+      catch { const ta = document.createElement("textarea"); ta.value = share; stage.querySelector(".card").appendChild(ta); ta.select(); toast("select and copy"); }
+    };
+    $("#lb").onclick = () => board();
+    if (practiceAnswers) $("#again").onclick = () => home();
   }
 
-  function toast(msg) {
-    const el = document.createElement("div"); el.className = "toast"; el.textContent = msg;
-    document.body.appendChild(el); setTimeout(() => el.remove(), 2400);
+  // ---------- leaderboard ----------
+  async function board(view = "today") {
+    if (document.querySelector("#in")) { toast("finish this prompt first"); return; }
+    show(`<div class="card"><p class="kicker">LEADERBOARD</p><p class="hint">loading…</p></div>`);
+    if (!(await pull())) return offlineCard(() => board(view));
+    buildRoster();
+    const names = {};
+    remote.plays.forEach((pl) => { names[norm(pl.player)] = names[norm(pl.player)] || pl.player; });
+    let list = Object.entries(names).map(([k, name]) => {
+      const h = history(name), today = h.rounds.find((r) => r.date === dayKey && r.answers.length);
+      const thrown = h.rounds.filter((r) => r.answers.length);
+      return { k, name, today: today ? sum(today.results) : null, all: thrown.reduce((s, r) => s + sum(r.results), 0), rounds: thrown.length, streak: streak(name) };
+    });
+    const key = view === "today" ? "today" : "all";
+    list = list.filter((r) => r[key] != null && (view === "today" || r.rounds)).sort((a, b) => b[key] - a[key] || a.name.localeCompare(b.name));
+    let rank = 0;
+    const rows = list.map((r, i) => {
+      if (i === 0 || r[key] !== list[i - 1][key]) rank = i + 1;
+      const meRow = me && norm(r.name) === norm(me.player);
+      return `<li class="${meRow ? "me" : ""}"><span class="rk">${rank}</span><span class="nm">${esc(r.name)}${meRow ? " (you)" : ""}</span><span class="sc">${r[key]}</span><span class="rd">${view === "today" ? (r.streak ? `streak ${r.streak}` : "") : `${r.rounds} rd${r.streak ? ` · streak ${r.streak}` : ""}`}</span></li>`;
+    }).join("");
+    show(`
+      <div class="card">
+        <p class="kicker">LEADERBOARD · BATCHILLION #${dayNum()}${API ? "" : " · LOCAL ONLY"}</p>
+        <div class="row tabs">
+          <button class="btn ${view === "today" ? "" : "ghost"}" data-v="today" type="button" aria-pressed="${view === "today"}">today</button>
+          <button class="btn ${view === "all" ? "" : "ghost"}" data-v="all" type="button" aria-pressed="${view === "all"}">all-time</button>
+        </div>
+        ${list.length ? `<ol class="board">${rows}</ol>` : `<p class="hint">${view === "today" ? "nobody has thrown yet today. be first." : "no rounds yet."}</p>`}
+        <div class="row"><button class="btn ghost" id="back" type="button">back</button><button class="linkish" id="admin" type="button">admin</button></div>
+      </div>`);
+    stage.querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => board(b.dataset.v)));
+    $("#back").onclick = () => home();
+    $("#admin").onclick = () => admin();
   }
 
-  // ---------- boot ----------
-  const saved = store.get();
-  if (saved && saved.done && !practice) finish(saved.answers);
-  else if (saved && saved.answers && saved.answers.length && !practice) play(saved.answers);
-  else intro();
+  // ---------- admin: rank appeals ----------
+  async function admin() {
+    const key = sessionStorage.getItem("bh:admin") || "";
+    if (!key) {
+      show(`
+        <div class="card"><p class="kicker">ADMIN</p><p class="prompt">Sign in to rank appeals</p>
+        <form id="kf" class="row"><input type="password" id="kk" placeholder="admin password" aria-label="admin password" autocomplete="current-password"><button class="btn" type="submit">sign in</button></form>
+        <p class="hint" id="km" aria-live="polite"></p><div class="row"><button class="btn ghost" id="back" type="button">back</button></div></div>`);
+      $("#kk").focus();
+      $("#back").onclick = () => home();
+      $("#kf").onsubmit = async (e) => {
+        e.preventDefault();
+        const r = await post({ action: "login", key: $("#kk").value });
+        if (!r.ok) { $("#km").textContent = r.error; return; }
+        sessionStorage.setItem("bh:admin", $("#kk").value); admin();
+      };
+      return;
+    }
+    if (!(await pull())) return offlineCard(admin);
+    buildRoster();
+    const byName = {};
+    remote.appeals.forEach((a) => {
+      const k = norm(a.typed); if (!k) return;
+      const it = (byName[k] = byName[k] || { typed: a.typed, tier: a.tier, year: a.year, from: [] });
+      it.from.push(`${a.player} (${P[a.prompt] ? P[a.prompt].text.replace("who started at UNC in ", "") : "?"})`);
+    });
+    const items = Object.values(byName).sort((a, b) => (a.tier ? 1 : 0) - (b.tier ? 1 : 0));
+    show(`
+      <div class="card"><p class="kicker">ADMIN · APPEALS · ${items.filter((x) => !x.tier).length} PENDING</p>
+      ${items.length ? items.map((it, i) => `
+        <div class="appeal${it.tier ? " done" : ""}">
+          <p class="who">${esc(it.typed)} <span class="pending">${it.tier ? (it.tier === "reject" ? "rejected" : `${T[it.tier] ? esc(T[it.tier].label) : esc(it.tier)} · ${esc(it.year)}`) : "pending"}</span></p>
+          <p class="q">appealed by ${esc(it.from.join(", "))}</p>
+          <div class="row"><input type="text" class="yr" data-i="${i}" placeholder="start year: 2024, or 2022/2023" value="${esc(it.year)}" aria-label="start year for ${esc(it.typed)}"></div>
+          <div class="chips">${Object.entries(T).map(([id, t]) => `<button class="chip tierchip" style="--c:${t.color}" data-i="${i}" data-t="${id}" type="button">${esc(t.label)}</button>`).join("")}<button class="chip" data-i="${i}" data-t="reject" type="button">reject</button></div>
+        </div>`).join("") : `<p class="hint">no appeals yet.</p>`}
+      <div class="row"><button class="btn ghost" id="back" type="button">back</button><button class="linkish" id="kout" type="button">admin sign out</button></div></div>`);
+    $("#back").onclick = () => home();
+    $("#kout").onclick = () => { sessionStorage.removeItem("bh:admin"); home(); };
+    stage.querySelectorAll("[data-t]").forEach((b) => (b.onclick = async () => {
+      const it = items[+b.dataset.i], year = stage.querySelector(`.yr[data-i="${b.dataset.i}"]`).value.trim();
+      if (b.dataset.t !== "reject" && !yearsOf(year).length) return toast("add a start year first");
+      b.disabled = true;
+      const r = await post({ action: "rank", key, typed: it.typed, tier: b.dataset.t, year });
+      if (!r.ok) { b.disabled = false; if (r.error === "wrong password") sessionStorage.removeItem("bh:admin"); return toast(r.error); }
+      toast(`${it.typed} → ${b.dataset.t === "reject" ? "rejected" : T[b.dataset.t].label}`); admin();
+    }));
+  }
+
+  // A tab left open past midnight can't score the old day.
+  // A tab left open past midnight moves to the new day, but never in the middle of a round: a
+  // round already under way finishes and is sent under its own day (the server allows 15 minutes).
+  setInterval(() => {
+    if (etKey() === dayKey || document.querySelector("#in, #next")) return;
+    if (me && !practice && ((ls.get(draftKey(), []) || []).length || ls.get(clockKey(), null))) return;
+    dayKey = etKey(); paintDay(); home();
+  }, 60000);
+
+  home();
 })();
