@@ -338,7 +338,7 @@
     show(`
       <div class="card">
         <p class="kicker">BATCHILLION #${dayNum()}${practice ? " · PRACTICE" : ""}${st ? ` · STREAK ${st}` : ""}</p>
-        <p class="prompt">You're up, <em>${esc(me.player)}</em>. Name a teammate from each starting class. Rarer ones fly farther.</p>
+        <p class="prompt">You're up, <em>${esc(me.player)}</em>. Name one teammate per class. The rarer the pick, the deeper the huck.</p>
         <p class="hint">${h.used.size ? `${h.used.size} teammate${h.used.size > 1 ? "s" : ""} already used by you. They're gone for good.` : "Once you name a teammate, you can never name them again."}</p>
         <div class="row">
           <button class="btn" id="go" type="button">pull</button>
