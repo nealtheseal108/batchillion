@@ -347,3 +347,35 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
   .tunes-tab .ic-note { width: 18px; height: 18px; }
   .tunes-panel { width: 210px; padding: 12px 14px; }
 }
+
+/* ---------- modals (how to play, leaderboard): fixed head, scrolling middle, pinned foot ---------- */
+/* the middle scrolls inside the ringed border, so text never slides under the frame */
+.dlg { padding: 0; overflow: hidden; }
+.dlg[open] { display: flex; flex-direction: column; }
+.dlg-head { flex: none; margin: 22px 26px 0; }
+.dlg-head .kicker { margin: 0 0 6px; }
+.dlg-tabs { flex: none; margin: 14px 26px 0; }
+.dlg-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0 6px; padding: 4px 20px 8px; scrollbar-width: thin; }
+.dlg-body > ol { margin: 14px 0 0; line-height: 1.36; gap: 4px; }
+.dlg-body .board { margin: 14px 0 4px; }
+.dlg-body .legend { margin-top: 16px; }
+.dlg-foot { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 26px 22px; padding-top: 14px; border-top: 2px solid var(--turf-b); }
+.dlg-foot form { margin: 0; }
+#board { max-width: 620px; }
+@media (max-width: 520px) {
+  .dlg-head { margin: 18px 18px 0; }
+  .dlg-tabs { margin: 12px 18px 0; }
+  .dlg-body { margin: 0 4px; padding: 4px 14px 8px; }
+  .dlg-foot { margin: 0 18px 18px; padding-top: 12px; }
+}
+@media (max-height: 700px) {
+  .dlg .kit { width: 54px; }
+  .dlg h2 { font-size: 30px; }
+  .dlg-head { margin-top: 16px; }
+  .dlg-foot { margin-bottom: 16px; padding-top: 10px; }
+}
+
+/* a dogwood in each modal's header, where the jersey thumbnail used to be */
+.dlg-flower { flex: none; width: 84px; height: 84px; color: var(--navy); --petal: var(--white); transform: rotate(-12deg); overflow: visible; }
+@media (max-width: 520px) { .dlg-flower { width: 66px; height: 66px; } }
+@media (max-height: 700px) { .dlg-flower { width: 56px; height: 56px; } }

@@ -23,7 +23,7 @@
   let activeTimer = null;
   const stopTimer = () => { clearInterval(activeTimer); activeTimer = null; };
   let nav = 0; // bumps on every screen change, so a slow async screen can tell it was replaced
-  const show = (html) => { stopTimer(); nav++; $("#boardBtn").disabled = false; stage.innerHTML = html; };
+  const show = (html) => { stopTimer(); nav++; stage.innerHTML = html; };
 
   // ---------- day (Eastern time) ----------
   let skew = 0; // server clock minus device clock, so the day flips on the server's midnight
@@ -415,7 +415,6 @@
         <div class="hint" id="hint" aria-live="polite"></div>
       </div>`);
     const input = $("#in"), hint = $("#hint");
-    $("#boardBtn").disabled = true; // leaving mid-prompt would lose it
     if (!left) hint.textContent = "nobody left in this class for you. try a name you know is missing (you can appeal it), or wait for the buzzer.";
     input.focus();
     // No hints while typing: autocorrect only happens when the player presses enter.
@@ -578,10 +577,16 @@
   }
 
   // ---------- leaderboard ----------
+  // ---------- leaderboard (a modal, like how to play) ----------
+  // Opens over whatever screen is up, so it never interrupts a prompt; the clock keeps running.
   async function board(view = "today") {
-    if (document.querySelector("#in")) { toast("finish this prompt first"); return; }
-    show(`<div class="card"><p class="kicker">LEADERBOARD</p><p class="hint">loading…</p></div>`);
-    if (!(await pull())) return offlineCard(() => board(view));
+    const dlg = $("#board"), body = $("#boardBody");
+    $("#boardSub").textContent = `BATCHILLION #${dayNum()}${API ? "" : " · LOCAL ONLY"}`;
+    if (!dlg.open) { body.innerHTML = `<p class="hint">loading…</p>`; dlg.showModal(); }
+    if (!(await pull())) {
+      body.innerHTML = `<p class="hint">Can't reach the leaderboard right now.</p><div class="row"><button class="btn ghost" id="lbRetry" type="button">try again</button></div>`;
+      $("#lbRetry").onclick = () => board(view); return;
+    }
     buildRoster();
     const names = {};
     remote.plays.forEach((pl) => { names[norm(pl.player)] = names[norm(pl.player)] || pl.player; });
@@ -598,20 +603,13 @@
       const meRow = me && norm(r.name) === norm(me.player);
       return `<li class="${meRow ? "me" : ""}"><span class="rk">${rank}</span><span class="nm">${esc(r.name)}${meRow ? " (you)" : ""}</span><span class="sc">${r[key]}</span><span class="rd">${view === "today" ? (r.streak ? `streak ${r.streak}` : "") : `${r.rounds} rd${r.streak ? ` · streak ${r.streak}` : ""}`}</span></li>`;
     }).join("");
-    show(`
-      <div class="card">
-        <p class="kicker">LEADERBOARD · BATCHILLION #${dayNum()}${API ? "" : " · LOCAL ONLY"}</p>
-        <div class="row tabs">
-          <button class="btn ${view === "today" ? "" : "ghost"}" data-v="today" type="button" aria-pressed="${view === "today"}">today</button>
-          <button class="btn ${view === "all" ? "" : "ghost"}" data-v="all" type="button" aria-pressed="${view === "all"}">all-time</button>
-        </div>
-        ${list.length ? `<ol class="board">${rows}</ol>` : `<p class="hint">${view === "today" ? "nobody has thrown yet today. be first." : "no rounds yet."}</p>`}
-        <div class="row"><button class="btn ghost" id="back" type="button">back</button><button class="linkish" id="admin" type="button">admin</button></div>
-      </div>`);
-    stage.querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => board(b.dataset.v)));
-    $("#back").onclick = () => home();
-    $("#admin").onclick = () => admin();
+    $("#boardTabs").innerHTML = `
+      <button class="btn ${view === "today" ? "" : "ghost"}" data-v="today" type="button" aria-pressed="${view === "today"}">today</button>
+      <button class="btn ${view === "all" ? "" : "ghost"}" data-v="all" type="button" aria-pressed="${view === "all"}">all-time</button>`;
+    body.innerHTML = list.length ? `<ol class="board">${rows}</ol>` : `<p class="hint">${view === "today" ? "nobody has thrown yet today. be first." : "no rounds yet."}</p>`;
+    dlg.querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => board(b.dataset.v)));
   }
+  $("#boardAdmin").onclick = () => { $("#board").close(); admin(); };
 
   // ---------- admin: rank appeals ----------
   async function admin() {
