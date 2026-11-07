@@ -211,7 +211,7 @@
   // A round played on day D only uses answers from days before D, so scores never move during a day and a
   // round keeps its score for good. Same tier rules as the stat sheets (ties share; one in a batchillion only
   // for a single lowest; at most 2 deep cuts; top quarter schooler) and the same fame cap.
-  const CROWD_MIN_PLAYERS = 12, CROWD_W = 0.5, ORDER = ["plankton", "schooler", "rare", "deep", "krillion"];
+  const CROWD_MIN_PLAYERS = 12, SCHOOLER_SHARE = 0.65 /* schooler is the default middle tier (Neal, 11/7); = tools/sheetlib.py */, CROWD_W = 0.5, ORDER = ["plankton", "schooler", "rare", "deep", "krillion"];
   function tierize(vals) {
     const keys = Object.keys(vals), levels = [...new Set(keys.map((n) => vals[n]))].sort((a, b) => b - a);
     const groups = levels.map((v) => keys.filter((n) => vals[n] === v)), out = {};
@@ -226,7 +226,7 @@
     if (lo === groups.length - 1 && lo >= 1) { groups[lo].forEach((n) => (out[n] = "rare")); lo--; }
     const mid = groups.slice(1, lo + 1);
     const count = mid.reduce((a, g) => a + g.length, 0) + Object.values(out).filter((t) => t === "rare" || t === "deep" || t === "krillion").length;
-    const x = count * 0.25, target = Math.abs(x - Math.trunc(x) - 0.5) < 1e-9 ? 2 * Math.round(x / 2) : Math.round(x);   // Python's round()
+    const x = count * SCHOOLER_SHARE, target = Math.abs(x - Math.trunc(x) - 0.5) < 1e-9 ? 2 * Math.round(x / 2) : Math.round(x);   // Python's round()
     let seen = 0;
     mid.forEach((g) => { const t = seen + g.length <= Math.max(target, 1) ? "schooler" : "rare"; g.forEach((n) => (out[n] = t)); seen += g.length; });
     return out;

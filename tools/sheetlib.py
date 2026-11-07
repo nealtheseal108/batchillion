@@ -10,6 +10,8 @@ import json
 
 TP = {'plankton': 10, 'schooler': 30, 'rare': 60, 'deep': 85, 'krillion': 100}
 ORDER = ['plankton', 'schooler', 'rare', 'deep', 'krillion']
+# Neal (11/7): schooler is the default, like the median; rare is only for people clearly below it.
+SCHOOLER_SHARE = 0.65
 
 
 def tiers(cnt):
@@ -33,7 +35,7 @@ def tiers(cnt):
         lo -= 1
     mid = groups[1:lo + 1]
     people = sum(len(g) for g in mid) + sum(1 for n in out if out[n] in ('rare', 'deep', 'krillion'))
-    target = round(people * 0.25); seen = 0
+    target = round(people * SCHOOLER_SHARE); seen = 0
     for g_ in mid:
         tier = 'schooler' if seen + len(g_) <= max(target, 1) else 'rare'
         for n in g_: out[n] = tier
