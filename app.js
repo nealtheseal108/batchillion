@@ -224,9 +224,10 @@
   // yards (100 pts = the full 70), each throw starts where the last one was caught, and the turf
   // scrolls under the disc so the end zones never move. Every 100 points is a goal.
   const FIELD = 70, YD = 1200 / 110, G0 = 20 * YD, G1 = G0 + FIELD * YD, MID = 150;
-  // One scale everywhere: every point moves the disc 0.7 yards, so 100 points is exactly the 70-yard field
-  // (caught on the far goal line). The field's line markers count in points, matching the score.
-  const PER_PT = FIELD / 100, LINE = 10 * PER_PT;            // a marker every 10 points
+  // A real field: 70 yards between the goal lines, 20-yard end zones, a line every 10 yards marked
+  // 10-60. A throw covers 0.7 yards per point, so 100 points crosses the whole 70 to the end zone.
+  // The markers repeat every 70 yards as the turf scrolls with your throws.
+  const PER_PT = FIELD / 100, LINE = 10;
   const yardsFor = (pts) => pts * PER_PT;
   const svgNS = "http://www.w3.org/2000/svg";
   const disc = $("#disc");
@@ -240,13 +241,13 @@
   function drawField() {
     let turf = "", lines = "";
     const small = matchMedia("(max-width: 520px)").matches, ly = small ? 48 : 26, room = small ? 6 : 3;
-    for (let b = Math.floor(offset / LINE - 1e-6); b * LINE < offset + FIELD; b++) // a turf band per 10 points
+    for (let b = Math.floor(offset / LINE - 1e-6); b * LINE < offset + FIELD; b++) // a turf band every 10 yards
       turf += `<rect x="${xAt(b * LINE)}" y="0" width="${LINE * YD + 0.5}" height="300" class="${b % 2 ? "band-b" : "band-a"}"/>`;
     for (let n = Math.ceil(offset / LINE - 1e-6); n * LINE < offset + FIELD - 1e-6; n++) {
       const y = n * LINE;
       if (Math.abs(y - offset) < 1e-6) continue;
-      const x = xAt(y), label = n * 10;                     // running points at this marker
-      lines += `<line x1="${x}" y1="0" x2="${x}" y2="300"/>` + (y <= offset + FIELD - room * PER_PT * 1.4 ? `<text x="${x + 6}" y="${ly}">${label}</text>` : "");
+      const x = xAt(y), label = Math.round(y) % FIELD;      // 10-60, then the next 70 starts again
+      lines += `<line x1="${x}" y1="0" x2="${x}" y2="300"/>` + (label && y <= offset + FIELD - room ? `<text x="${x + 6}" y="${ly}">${label}</text>` : "");
     }
     $("#turf").innerHTML = turf;
     $("#lines").innerHTML = lines;
