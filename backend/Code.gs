@@ -5,8 +5,8 @@
  * Setup (once, about 3 minutes):
  *   1. Create a new Google Sheet named "Batchillion".
  *   2. Extensions > Apps Script. Replace the editor contents with this file. Save.
- *   3. Project Settings (gear) > Script properties > Add property
- *        ADMIN_KEY = a long password you choose. Never put it in the website code.
+ *   3. In the editor pick the function "setup" and press Run. Approve the permissions. It makes
+ *      the tabs and prints your admin password (ADMIN_KEY) in the log. Never put it in site code.
  *   4. Deploy > New deployment > type "Web app".
  *        Execute as: Me.   Who has access: Anyone.
  *      Authorize when asked (it needs this sheet and permission to email you about appeals).
@@ -25,6 +25,19 @@ const TABS = {
   appeals: ["date", "player", "prompt", "typed", "tier", "year", "submittedAt"],
   accounts: ["player", "salt", "hash", "token", "createdAt"],
 };
+
+// Run once from the Apps Script editor (select "setup", press Run). It asks for permission,
+// creates the three tabs, and, if no admin password exists yet, makes one and prints it in the
+// execution log. Change it anytime in Project Settings > Script properties > ADMIN_KEY.
+function setup() {
+  Object.keys(TABS).forEach(sheet_);
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty("ADMIN_KEY")) {
+    props.setProperty("ADMIN_KEY", Utilities.getUuid().replace(/-/g, "").slice(0, 20));
+    console.log("Your Batchillion admin password: " + props.getProperty("ADMIN_KEY"));
+  } else console.log("Admin password already set (Project Settings > Script properties).");
+  MailApp.getRemainingDailyQuota(); // makes the permission screen include email, for appeal alerts
+}
 
 // ---------- sheet helpers ----------
 function sheet_(name) {

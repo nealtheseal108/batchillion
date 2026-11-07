@@ -32,14 +32,13 @@ window.ROSTER = [
   ["Elio", "clever", 2024],
   ["Ethan Berson", "schooler", 2025],
   ["Gavin", "plankton", 2025],
-  ["Gram", "rare", 2025],
+  ["Gram", "deep", 2025],
   ["Henry Holland", "deep", 2023],
   ["Isaac Ho", "rare", 2025],
-  ["Isaac Lefevre", "rare", 2026],
-  ["Ish", "rare", 2025],
+  ["Ish", "deep", 2025],
   ["Jack Herring", "schooler", 2023],
   ["James Conley", "rare", 2021],
-  ["Jeremy F", "rare", 2025],
+  ["Jeremy F", "deep", 2025],
   ["Jon Aycock", "clever", 2019],     // "before 20"
   ["Josh Lo", "rare", 2025],
   ["Kent", "schooler", 2026],
@@ -61,7 +60,7 @@ window.ROSTER = [
   ["Oliver", "plankton", 2025],
   ["Owen", "plankton", 2023],
   ["Parker", "plankton", 2023],
-  ["Peter C", "deep", 2022],
+  ["Peter C", "krillion", 2022],
   ["Peter D", "schooler", 2026],
   ["Rishi Singh", "deep", 2023],
   ["Robert S", "krillion", 2024],
@@ -83,6 +82,7 @@ window.ROSTER = [
   ["Bryce", "plankton", 2025],
   ["Riley", "schooler", 2025],
   ["Max", "schooler", 2026],
+  ["Brody", "deep", 2025],
 ];
 
 // Tiers: points are yards downfield. 100 = caught in the end zone.
