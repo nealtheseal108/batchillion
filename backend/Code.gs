@@ -21,7 +21,7 @@
 const ZONE = "America/New_York";
 const PROMPTS = 7;
 const TABS = {
-  plays: ["date", "player", "answers", "startedAt", "submittedAt"],
+  plays: ["date", "player", "answers", "startedAt", "submittedAt", "set"],
   appeals: ["date", "player", "prompt", "typed", "tier", "year", "submittedAt"],
   accounts: ["player", "salt", "hash", "token", "createdAt"],
   // The public roster additions: every approved appeal lands here (and Neal can add rows by hand).
@@ -52,6 +52,9 @@ function sheet_(name) {
     sh.setFrozenRows(1);
     sh.getRange(1, 1, sh.getMaxRows(), 4).setNumberFormat("@"); // dates and names stay plain text
   }
+  // Older sheets were made before a column existed: add any missing header (e.g. plays.set).
+  const want = TABS[name], have = sh.getRange(1, 1, 1, want.length).getValues()[0];
+  want.forEach((h, i) => { if (have[i] !== h) sh.getRange(1, i + 1).setValue(h); });
   return sh;
 }
 function rows_(name) {
@@ -123,7 +126,7 @@ function cleanAnswers_(answers, player, row, plays) {
 // GET: everything the game needs. All rounds (for the leaderboard and the never-reuse rule), all
 // appeals (ranked ones become roster additions), and today's date in Eastern time.
 function doGet() {
-  const plays = rows_("plays").map((r) => ({ row: r._row, date: day_(r.date), player: String(r.player), answers: parse_(r.answers), done: String(r.submittedAt || "") !== "" }));
+  const plays = rows_("plays").map((r) => ({ row: r._row, set: String(r.set || "classes"), date: day_(r.date), player: String(r.player), answers: parse_(r.answers), done: String(r.submittedAt || "") !== "" }));
   const appeals = rows_("appeals").map((r) => ({
     date: day_(r.date), player: String(r.player), prompt: Number(r.prompt), typed: String(r.typed),
     tier: String(r.tier || "").trim().toLowerCase(), year: String(r.year || "").trim(),
@@ -206,10 +209,11 @@ function doPost(e) {
     // Start: as many rounds a day as you like. Reuse a round left open today, or open a new one.
     if (b.action === "start") {
       if (date !== today_()) return json_({ ok: false, error: "a new Batchillion is live. reload the page" });
-      const open = mineAll.find((r) => day_(r.date) === date && !isDone(r));
-      if (open) return json_({ ok: true, row: open._row, answers: parse_(open.answers) });
-      sh.appendRow([text_(date), cell_(name), "", new Date(), ""]);
-      return json_({ ok: true, row: sh.getLastRow(), answers: [] });
+      const set = /^[a-z0-9_-]{1,24}$/.test(String(b.set || "")) ? String(b.set) : "classes";   // which round type
+      const open = mineAll.find((r) => day_(r.date) === date && !isDone(r) && String(r.set || "classes") === set);
+      if (open) return json_({ ok: true, row: open._row, set, answers: parse_(open.answers) });
+      sh.appendRow([text_(date), cell_(name), "", new Date(), "", set]);
+      return json_({ ok: true, row: sh.getLastRow(), set, answers: [] });
     }
 
     // Throw: saves the round so far (each throw spends the teammate); 7 answers closes the round.
@@ -218,7 +222,7 @@ function doPost(e) {
       if (!Array.isArray(b.answers) || !b.answers.length || b.answers.length > PROMPTS) return json_({ ok: false, error: "bad request" });
       let r = mineAll.find((x) => x._row === Number(b.row));
       if (!r && b.action === "play") r = mineAll.find((x) => day_(x.date) === date && !isDone(x));   // older pages
-      if (!r) { sh.appendRow([text_(date), cell_(name), "", new Date(), ""]); r = { _row: sh.getLastRow(), submittedAt: "" }; }
+      if (!r) { sh.appendRow([text_(date), cell_(name), "", new Date(), "", "classes"]); r = { _row: sh.getLastRow(), submittedAt: "" }; }
       if (isDone(r)) return json_({ ok: false, error: "that round is closed" });
       // Saves can land out of order; a round only ever grows, so an older, shorter save is ignored.
       const stored = r.answers !== undefined ? parse_(r.answers) : [];

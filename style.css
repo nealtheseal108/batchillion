@@ -415,3 +415,11 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
   .tb { width: 26px; height: 26px; } .tb-play { width: 28px; height: 28px; }
   .card .legend { display: none; }   /* the tier key is also in how to play */
 }
+
+/* round picker on the home card */
+.picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 4px 0 12px; }
+.btn.pick { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; white-space: normal; padding: 12px 16px 11px; }
+.btn.pick small { font: 600 12px/1.2 var(--text); letter-spacing: 0; text-transform: none; opacity: .8; }
+.btn.pick .new { font: 800 11px/1 var(--num); letter-spacing: .12em; background: var(--carolina); color: var(--navy); padding: 2px 5px 1px; border-radius: 4px; margin-left: 4px; vertical-align: 2px; }
+.btn.pick.ghost .new { background: var(--navy); color: var(--white); }
+@media (max-height: 620px) { .picks { gap: 6px; margin-bottom: 6px; } .btn.pick { padding: 8px 12px 7px; } }

@@ -11,6 +11,13 @@
   const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const yearsOf = (y) => (Array.isArray(y) ? y : String(y || "").split(/[\/, ]+/).map(Number).filter(Boolean));
+  // Round types: "classes" asks by starting year; stat rounds list each prompt's answers with their own tiers.
+  const ROUNDS = (window.ROUNDS || [{ id: "classes", title: "Players", prompts: P }]).map((r) => ({
+    ...r, prompts: r.prompts.map((q) => ({ ...q, tierOf: q.tiers ? Object.fromEntries(Object.entries(q.tiers).map(([n, t]) => [norm(n), t])) : null })),
+  }));
+  const setOf = (id) => ROUNDS.find((r) => r.id === id) || ROUNDS[0];
+  const fits = (q, p) => (q.tierOf ? !!q.tierOf[p.key] : p.years.some(q.test));
+  const tierFor = (q, p) => (q.tierOf ? q.tierOf[p.key] : p.tier);   // stat prompts set their own tiers
   const ls = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
@@ -72,7 +79,7 @@
   let remote = { plays: [], appeals: [] }, online = !API;
   // Each round is its own row (oldest first). "done" = all 7 thrown; an open row is a round in progress.
   const normPlays = (list) => (Array.isArray(list) ? list : []).map((p, i) => ({
-    ...p, row: p.row ?? i + 1, answers: Array.isArray(p.answers) ? p.answers : [], done: p.done ?? (Array.isArray(p.answers) && p.answers.length >= 7),
+    ...p, row: p.row ?? i + 1, set: p.set || "classes", answers: Array.isArray(p.answers) ? p.answers : [], done: p.done ?? (Array.isArray(p.answers) && p.answers.length >= 7),
   }));
   async function pull(keepDay = false) {
     if (!API) { remote = { plays: normPlays(ls.get("bh:plays", [])), appeals: ls.get("bh:appeals", []) }; return true; }
@@ -108,9 +115,10 @@
     }
     const plays = ls.get("bh:plays", []);
     if (b.action === "start") {   // reuse an open round for today, or open a new one
-      let open = plays.find((p) => p.date === b.date && norm(p.player) === norm(b.player) && !p.done);
-      if (!open) { open = { row: plays.length + 1, date: b.date, player: b.player, answers: [], done: false }; plays.push(open); ls.set("bh:plays", plays); }
-      return { ok: true, row: open.row, answers: open.answers };
+      const set = b.set || "classes";
+      let open = plays.find((p) => p.date === b.date && norm(p.player) === norm(b.player) && !p.done && (p.set || "classes") === set);
+      if (!open) { open = { row: plays.length + 1, date: b.date, player: b.player, set, answers: [], done: false }; plays.push(open); ls.set("bh:plays", plays); }
+      return { ok: true, row: open.row, set, answers: open.answers };
     }
     if (b.action === "throw") {   // save the round so far; 7 answers closes it
       const r = plays.find((p) => p.row === b.row && norm(p.player) === norm(b.player));
@@ -134,6 +142,10 @@
   function buildRoster() {
     const base = window.ROSTER.map(([full, tier, year, note], i) => mk({ full, tier, years: yearsOf(year), note }, i));
     people = base;
+    // Players who only appear in the stats (not on the roster yet) can still be named in stat rounds.
+    ROUNDS.forEach((r) => r.prompts.forEach((q) => Object.keys(q.tiers || {}).forEach((n) => {
+      if (!people.some((p) => p.key === norm(n))) people.push(mk({ full: n, tier: "schooler", years: [], statsOnly: true }, people.length));
+    })));
     // The public roster tab: approved appeals and names Neal added in the Sheet.
     (remote.roster || []).forEach((r) => {
       const k = norm(r.name);
@@ -176,19 +188,20 @@
 
   // ---------- scoring ----------
   // One answer against today's roster (so ranked appeals apply retroactively).
-  function score(ans, k) {
-    const prompt = P[k];
+  function score(ans, k, set) {
+    const prompt = setOf(set).prompts[k];
     if (!prompt || !ans || typeof ans !== "object") return { pts: 0, status: "no answer" };
     const p = exactOf(ans.full || ans.typed);
     if (!p) return { pts: 0, status: ans.reused ? `${ans.reused} was already used` : ans.typed ? "not on the list" : "no answer" };
-    if (!p.years.some(prompt.test)) return { pts: 0, person: p, status: `wrong class: started ${p.years.join(" or ")}` };
-    return { pts: T[p.tier].pts, tier: p.tier, person: p };
+    if (!fits(prompt, p)) return { pts: 0, person: p, status: prompt.tierOf ? `doesn't fit "${prompt.short}"` : `wrong class: started ${p.years.join(" or ")}` };
+    const tier = tierFor(prompt, p);
+    return { pts: T[tier].pts, tier, person: p };
   }
   // A round scored against everyone the player had already used. A teammate counts once per
   // player, ever, even when an appeal makes an old answer valid later.
-  function scoreRound(answers, used) {
+  function scoreRound(answers, used, set) {
     return (Array.isArray(answers) ? answers.slice(0, P.length) : []).map((a, k) => {
-      const r = score(a, k);
+      const r = score(a, k, set);
       if (!r.person) return r;
       if (used.has(r.person.key)) return { pts: 0, person: r.person, status: `${r.person.full} was already used` };
       used.add(r.person.key);
@@ -201,7 +214,7 @@
   const playsOf = (player) => remote.plays.filter((pl) => norm(pl.player) === norm(player) && pl.answers.length).sort((a, b) => a.row - b.row);
   function history(player) {
     const used = new Set(), rounds = [];
-    playsOf(player).forEach((pl) => { const before = new Set(used); rounds.push({ row: pl.row, date: pl.date, done: pl.done, answers: pl.answers, before, results: scoreRound(pl.answers, used) }); });
+    playsOf(player).forEach((pl) => { const before = new Set(used); rounds.push({ row: pl.row, set: pl.set, date: pl.date, done: pl.done, answers: pl.answers, before, results: scoreRound(pl.answers, used, pl.set) }); });
     return { used, rounds };
   }
   // Teammates used before a given round: every earlier round, nothing from this one.
@@ -362,51 +375,51 @@
     if (!(await pull())) return offlineCard(home);
     buildRoster();
     const draft = practice ? null : ls.get(draftKey(), null);
-    if (draft && draft.row) return play(draft.answers || [], draft.row);   // a round in progress on this device
+    if (draft && draft.row) return play(draft.answers || [], draft.row, draft.set);   // a round in progress on this device
     resetField();
     const h = history(me.player), st = streak(me.player), today = todayOf(h);
     const left = people.filter((p) => !h.used.has(p.key)).length;
     show(`
       <div class="card">
         <p class="kicker">BATCHILLION #${dayNum()}${practice ? " · PRACTICE" : ""}${st ? ` · STREAK ${st}` : ""}</p>
-        <p class="prompt">You're up, <em>${esc(me.player)}</em>. Name one teammate per class. The rarer the pick, the deeper the huck.</p>
+        <p class="prompt">You're up, <em>${esc(me.player)}</em>. Pick a round. The rarer the pick, the deeper the huck.</p>
         <p class="hint">${today.rounds.length ? `Today: ${today.rounds.length} round${today.rounds.length > 1 ? "s" : ""}, ${today.yards} yards. ` : ""}${left ? `${left} teammate${left > 1 ? "s" : ""} left for you. Play as many rounds as you want; every name you use is gone for good.` : "You've used every teammate. Nobody left to throw to."}</p>
-        <div class="row">
-          <button class="btn" id="go" type="button" ${left ? "" : "disabled"}>${today.rounds.length ? "pull again" : "pull"}</button>
-          <button class="btn ghost" id="out" type="button">not ${esc(me.player)}? sign out</button>
-        </div>
+        <div class="picks">${openRounds().map((r, i) => `<button class="btn pick${i ? " ghost" : ""}" data-set="${r.id}" type="button" ${left ? "" : "disabled"}><span>${esc(r.title)}${r.unlock ? ' <b class="new">new</b>' : ""}</span><small>${esc(r.blurb || "")}</small></button>`).join("")}</div>
+        <div class="row"><button class="linkish" id="out" type="button">not ${esc(me.player)}? sign out</button></div>
       </div>`);
-    $("#go").focus();
-    $("#go").onclick = () => startRound($("#go"));
+    const first = stage.querySelector("[data-set]"); if (first) first.focus();
+    stage.querySelectorAll("[data-set]").forEach((b) => (b.onclick = () => startRound(b, b.dataset.set)));
     $("#out").onclick = signOut;
   }
 
-  // Opens a round on the server (or picks up one left open), then plays it.
-  async function startRound(btn) {
-    if (practice) return play([], 0);
+  const openRounds = () => ROUNDS.filter((r) => !r.unlock || dayIndex(dayKey) >= dayIndex(r.unlock));
+  // Opens a round of the chosen type on the server (or picks up one left open), then plays it.
+  async function startRound(btn, set = "classes") {
+    if (practice) return play([], 0, set);
     if (btn) btn.disabled = true;
     // iOS only raises the keyboard for focus() inside the tap itself, so hold it with a stand-in box.
     const proxy = Object.assign(document.createElement("input"), { type: "text" });
     proxy.style.cssText = "position:fixed;top:0;left:0;opacity:0;height:0;font-size:16px";
     document.body.appendChild(proxy); proxy.focus();
-    const r = await post({ action: "start", date: dayKey, player: me.player, token: me.token });
+    const r = await post({ action: "start", date: dayKey, player: me.player, token: me.token, set });
     if (!r.ok) {
       proxy.remove();
       if (r.error === "sign in again") return signOut();
       if (r.net) return offlineCard(home);
       toast(r.error); return home();
     }
-    const st = { row: r.row, answers: Array.isArray(r.answers) ? r.answers : [] };
+    const st = { row: r.row, set: r.set || set, answers: Array.isArray(r.answers) ? r.answers : [] };
     ls.set(draftKey(), st); ls.del(clockKey());
-    play(st.answers, st.row); proxy.remove();
+    play(st.answers, st.row, st.set); proxy.remove();
   }
 
   // ---------- one prompt ----------
-  function play(answers, row) {
+  function play(answers, row, set = "classes") {
+    const R = setOf(set), PR = R.prompts;
     const i = answers.length;
-    if (i >= P.length) return submitRound(answers, row);
+    if (i >= PR.length) return submitRound(answers, row, set);
     const prior = practice ? new Set() : usedBefore(me.player, row);
-    const results = scoreRound(answers, new Set(prior));
+    const results = scoreRound(answers, new Set(prior), set);
     const used = new Set(prior); results.forEach((r) => r.person && used.add(r.person.key));
     resetField(results);
     // The clock lives in storage, so reloading mid-prompt does not buy a fresh 30 seconds.
@@ -414,11 +427,11 @@
     if (!clock || clock.i !== i || clock.row !== row) { clock = { row, i, t0: Date.now() }; if (!practice) ls.set(clockKey(), clock); }
     const deadline = clock.t0 + SECONDS * 1000;
     let locked = false, lastReject = "";
-    const left = people.filter((p) => p.years.some(P[i].test) && !used.has(p.key)).length;
+    const left = people.filter((p) => fits(PR[i], p) && !used.has(p.key)).length;
     show(`
       <div class="card">
-        <p class="kicker">PROMPT ${i + 1} / ${P.length} · ${left} LEFT FOR YOU</p>
-        <p class="prompt">Name a BatCH teammate <em>${esc(P[i].text)}</em></p>
+        <p class="kicker">${R.id === "classes" ? "" : `${esc(R.title.toUpperCase())} · `}PROMPT ${i + 1} / ${PR.length} · ${left} LEFT FOR YOU</p>
+        <p class="prompt">Name a BatCH teammate <em>${esc(PR[i].text)}</em></p>
         <div class="clock" id="clk"><span class="secs" id="secs">${SECONDS}</span><div class="timer" id="tm"><i></i></div></div>
         <form class="row" id="f" autocomplete="off">
           <input type="text" id="in" placeholder="name…" aria-label="teammate name" autocapitalize="words" autocorrect="off" spellcheck="false" maxlength="60">
@@ -449,7 +462,7 @@
     function submit(timedOut) {
       if (locked) return;
       const raw = input.value.trim(), ex = exactOf(raw);
-      const catches = ex && !used.has(ex.key) && ex.years.some(P[i].test);
+      const catches = ex && !used.has(ex.key) && fits(PR[i], ex);
       if (!timedOut) {
         if (!raw) return;
         if (!ex) {
@@ -462,13 +475,13 @@
           return drop(`"${raw}" isn't on the roster. try again`);
         }
         if (used.has(ex.key)) return drop(`${ex.full} is already used. ever. pick someone else`);
-        if (!catches) return drop(`${ex.full} didn't start ${P[i].short}. try again`);
+        if (!catches) return drop(PR[i].tierOf ? `${ex.full} doesn't fit this one. try again` : `${ex.full} didn't start ${PR[i].short}. try again`);
       }
       locked = true; stopTimer();
       const offRoster = raw && !ex && !candidates(raw).length;
       const ans = catches ? { typed: raw, full: ex.full } : { typed: offRoster ? raw : lastReject, full: null };
       if (!practice) ls.del(clockKey());
-      reveal([...answers, ans], sum(results), row);
+      reveal([...answers, ans], sum(results), row, set);
     }
   }
 
@@ -478,11 +491,11 @@
     if (practice || !row) return Promise.resolve({ ok: true });
     return post({ action: "throw", date: dayKey, player: me.player, token: me.token, row, answers: all });
   }
-  async function reveal(all, before, row) {
+  async function reveal(all, before, row, set = "classes") {
     const k = all.length - 1, ans = all[k];
-    if (!practice) { ls.set(draftKey(), { row, answers: all }); if (all.length < P.length) sendThrows(row, all); }
+    if (!practice) { ls.set(draftKey(), { row, set, answers: all }); if (all.length < P.length) sendThrows(row, all); }
     const prior = practice ? new Set() : usedBefore(me.player, row);
-    const r = scoreRound(all, new Set(prior))[k];
+    const r = scoreRound(all, new Set(prior), set)[k];
     const h = (stage.querySelector(".card") || stage).offsetHeight;   // keep the placeholder the size of the card it replaces
     show(`<div class="card" style="min-height:${h}px"><p class="kicker">PROMPT ${all.length} / ${P.length}</p><p class="prompt">${r.pts ? "up it goes…" : "turnover."}</p></div>`);
     const mine = nav;
@@ -502,11 +515,11 @@
         <div class="row"><button class="btn" id="next" type="button">${last ? "see how far you threw it" : "next pull"}</button></div>
       </div>`);
     $("#next").focus();
-    $("#next").onclick = () => play(all, row);
+    $("#next").onclick = () => play(all, row, set);
   }
 
-  async function submitRound(answers, row) {
-    if (practice) return finish(0, answers);
+  async function submitRound(answers, row, set = "classes") {
+    if (practice) return finish(0, answers, set);
     show(`<div class="card"><p class="kicker">BATCHILLION #${dayNum()}</p><p class="prompt">Sending your throws…</p></div>`);
     const r = await sendThrows(row, answers);
     if (r.ok || r.error === "that round is closed") {
@@ -520,7 +533,7 @@
     show(`<div class="card"><p class="kicker">BATCHILLION #${dayNum()}</p><p class="prompt">Your round didn't reach the server.</p>
       <p class="hint">${esc(r.error || "unknown error")}. It's saved on this device.</p>
       <div class="row"><button class="btn" id="resend" type="button">resend</button></div></div>`);
-    $("#resend").onclick = () => submitRound(answers, row);
+    $("#resend").onclick = () => submitRound(answers, row, set);
   }
 
   // ---------- recap + appeal ----------
@@ -533,10 +546,11 @@
   ];
   const SQUARES = { plankton: "⬜", clever: "🟫", schooler: "🟦", rare: "🟥", deep: "🟪", krillion: "🟨" };
 
-  function finish(row, practiceAnswers = null) {
+  function finish(row, practiceAnswers = null, practiceSet = "classes") {
     const h = practiceAnswers ? null : history(me.player);
-    const round = practiceAnswers ? { answers: practiceAnswers, results: scoreRound(practiceAnswers, new Set()) }
+    const round = practiceAnswers ? { set: practiceSet, answers: practiceAnswers, results: scoreRound(practiceAnswers, new Set(), practiceSet) }
       : h.rounds.find((x) => x.row === row) || h.rounds.filter((x) => x.date === dayKey).pop() || { answers: [], results: [] };
+    const R = setOf(round.set), PR = R.prompts;
     const res = round.results.map((r, k) => ({ ...r, a: round.answers[k] || {}, k }));
     resetField(round.results);
     const tot = sum(round.results);
@@ -551,7 +565,7 @@
     const st = h ? streak(me.player) : 0;
     show(`
       <div class="card">
-        <p class="kicker">BATCHILLION #${dayNum()}${nth > 0 ? ` · ROUND ${nth} TODAY` : ""}${st ? ` · STREAK ${st}` : ""}</p>
+        <p class="kicker">BATCHILLION #${dayNum()} · ${esc(R.title.toUpperCase())}${nth > 0 ? ` · ROUND ${nth} TODAY` : ""}${st ? ` · STREAK ${st}` : ""}</p>
         <p class="prompt">You threw it <em>${tot}</em> yards</p>
         <p class="verdict">${esc(verdict)}</p>
         ${h ? `<p class="hint">Today: ${today.rounds.length} round${today.rounds.length === 1 ? "" : "s"}, ${today.yards} yards. ${left ? `${left} teammate${left > 1 ? "s" : ""} left for you.` : "You've used every teammate."}</p>` : ""}
@@ -559,14 +573,15 @@
           const t = r.tier && T[r.tier];
           const ap = myAppeal && Number(myAppeal.prompt) === r.k ? `<span class="pending">appeal ${myAppeal.tier ? (myAppeal.tier === "reject" ? "rejected" : "ranked") : "pending"}</span>` : "";
           return `<li style="--c:${t ? t.color : "var(--graphite)"}">
-            <div><div class="q">${esc(P[r.k].text)}</div>
+            <div><div class="q">${esc(PR[r.k].tierOf ? PR[r.k].short : PR[r.k].text)}</div>
             <div class="a">${esc(r.person ? r.person.full : r.a.typed || "no answer")} <span class="tag">${t ? esc(t.label) : esc(r.status)}</span> ${ap}</div>
             ${appealable(r) ? `<button class="chip" data-appeal="${r.k}" type="button">appeal this name</button>` : ""}</div>
             <div class="p">${r.pts}</div></li>`;
         }).join("")}</ul>
         ${res.some(appealable) ? `<p class="hint">You get one appeal a day. ${esc(window.APPEAL_WHO)} ranks it and your score updates.</p>` : ""}
         <div class="row">
-          ${left ? `<button class="btn" id="again" type="button">pull again</button>` : ""}
+          ${left ? `<button class="btn" id="again" type="button">another ${esc(R.title.toLowerCase())}</button>` : ""}
+          <button class="btn ghost" id="rounds" type="button">pick a round</button>
           <button class="btn ghost" id="share" type="button">share</button>
           <button class="btn ghost" id="lb" type="button">leaderboard</button>
         </div>
@@ -577,7 +592,7 @@
       const r = await post({ action: "appeal", date: dayKey, player: me.player, token: me.token, prompt: k, typed: round.answers[k].typed });
       if (!r.ok) { toast(r.error); b.textContent = "appeal this name"; b.disabled = false; return; }
       toast(API ? `appeal sent to ${window.APPEAL_WHO}` : "saved locally (backend not connected yet)");
-      await pull(true); buildRoster(); finish(row, practiceAnswers);
+      await pull(true); buildRoster(); finish(row, practiceAnswers, practiceSet);
     }));
     $("#share").onclick = async () => {
       if (navigator.share) { try { await navigator.share({ text: share }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
@@ -585,7 +600,8 @@
       catch { const ta = document.createElement("textarea"); ta.value = share; stage.querySelector(".card-scroll").appendChild(ta); ta.select(); toast("select and copy"); }
     };
     $("#lb").onclick = () => board();
-    if ($("#again")) $("#again").onclick = () => (practiceAnswers ? home() : startRound($("#again")));
+    if ($("#again")) $("#again").onclick = () => (practiceAnswers ? home() : startRound($("#again"), round.set || "classes"));
+    $("#rounds").onclick = () => home();
   }
 
   // ---------- leaderboard ----------
@@ -609,13 +625,13 @@
       let nToday = 0;
       h.rounds.forEach((r) => {
         const isToday = r.date === dayKey; if (isToday) nToday++;
-        if (r.done || r.answers.length >= P.length) list.push({ name, yards: sum(r.results), date: r.date, isToday, nth: isToday ? nToday : 0 });
+        if (r.done || r.answers.length >= P.length) list.push({ name, set: r.set, yards: sum(r.results), date: r.date, isToday, nth: isToday ? nToday : 0 });
       });
     });
     if (view === "today") list = list.filter((r) => r.isToday);
     list.sort((a, b) => b.yards - a.yards || a.name.localeCompare(b.name));
     list = list.slice(0, 50);
-    const when = (r) => { if (r.isToday) return `round ${r.nth} today`; const [y, m, d] = dayParts(r.date); return `#${dayIndex(r.date) - FIRST + 1} · ${m}/${d}`; };
+    const when = (r) => { const t = setOf(r.set).title.toLowerCase(); if (r.isToday) return `${t} · round ${r.nth} today`; const [y, m, d] = dayParts(r.date); return `${t} · #${dayIndex(r.date) - FIRST + 1} · ${m}/${d}`; };
     let rank = 0;
     const rows = list.map((r, i) => {
       if (i === 0 || r.yards !== list[i - 1].yards) rank = i + 1;

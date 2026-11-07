@@ -115,6 +115,34 @@ window.PROMPTS = [
   { id: "wild",  short: "ever", text: "who ever played, any year (wildcard)", test: () => true },
 ];
 
+// Round types. "Players" asks by starting year (window.PROMPTS); stat rounds carry their own per-prompt tiers.
+// A round with an "unlock" date shows up from that day on (Eastern time).
+// Stat rounds, built from BatCH26-27-stats.csv (this season's tournament stats through Bankrun) by stat_gen.py.
+// Each prompt sets its own tiers from how often each answer happened: the most frequent is plankton,
+// the least frequent is the one in a batchillion, then schooler, rare and deep cut in between.
+// Players not on the roster yet (Daniel, JT, Matthew, Micah, Michael, Noah N, Patrick, William) still count here.
+window.ROUNDS = [
+  { id: "classes", title: "Players", blurb: "one teammate per starting year", prompts: window.PROMPTS },
+  { id: "stats1", title: "Stat sheet I", blurb: "assists, Ds, pulls, Feasterns, Duke", unlock: "2026-11-7", prompts: [
+      { id: "owen-ast", short: "Owen assisted", text: "that Owen has thrown a goal to", tiers: {"Bryce": "plankton", "Dylan Edwards": "krillion", "Gavin": "rare", "Noah Goldblatt": "schooler", "Parker": "deep"} },
+      { id: "nate-ast", short: "Nate assisted", text: "that Nate has thrown a goal to", tiers: {"Ben Horton": "rare", "Bryce": "plankton", "Daniel": "krillion", "Gavin": "rare", "Kent": "deep", "Micah": "schooler", "Noah Goldblatt": "deep", "Oliver": "rare", "Owen": "schooler"} },
+      { id: "to-gavin", short: "threw to Gavin", text: "who has thrown a goal to Gavin", tiers: {"Aashay Rathi": "deep", "Bryce": "schooler", "Carson Jewell": "schooler", "Centurion": "deep", "Kent": "deep", "Max": "krillion", "Nate": "rare", "Neal": "plankton", "Oliver": "rare", "Owen": "rare"} },
+      { id: "has-d", short: "got a D", text: "with a D (block) this season", tiers: {"Aashay Rathi": "rare", "Andrew Carneiro": "deep", "Ben Horton": "rare", "Bryce": "rare", "Carson Jewell": "deep", "Centurion": "rare", "Daniel": "rare", "Drake": "deep", "Eli Card": "deep", "Elliot": "rare", "Ethan Berson": "deep", "Gavin": "schooler", "JT": "deep", "Kent": "deep", "King": "deep", "Matthew": "schooler", "Max": "rare", "Micah": "schooler", "Michael": "deep", "Nate": "rare", "Neal": "schooler", "Noah Goldblatt": "schooler", "Noah N": "krillion", "Oliver": "rare", "Owen": "schooler", "Parker": "plankton"} },
+      { id: "feasterns", short: "scored at Feasterns", text: "who scored at Feasterns", tiers: {"Ben Horton": "rare", "Bryce": "plankton", "Carson Jewell": "rare", "Centurion": "schooler", "Daniel": "deep", "Gavin": "schooler", "Matthew": "deep", "Max": "rare", "Micah": "rare", "Michael": "krillion", "Nate": "rare", "Neal": "deep", "Noah Goldblatt": "deep", "Owen": "schooler"} },
+      { id: "pulled", short: "pulled", text: "who has pulled this season", tiers: {"Andrew Carneiro": "schooler", "Bryce": "deep", "Carson Jewell": "krillion", "Centurion": "rare", "Gavin": "rare", "Kent": "deep", "King": "deep", "Max": "plankton", "Neal": "schooler", "Noah Goldblatt": "rare"} },
+      { id: "vs-duke", short: "scored vs Duke", text: "who scored against Duke", tiers: {"Andrew Carneiro": "schooler", "Bryce": "rare", "Carson Jewell": "deep", "Dylan Edwards": "schooler", "Gavin": "plankton", "Noah Goldblatt": "deep", "Oliver": "rare", "Ryan B": "krillion"} },
+    ] },
+  { id: "stats2", title: "Stat sheet II", blurb: "assists, drops, Bankrun, USC, 5+ goals", unlock: "2026-11-7", prompts: [
+      { id: "oliver-ast", short: "Oliver assisted", text: "that Oliver has thrown a goal to", tiers: {"Bryce": "schooler", "Gavin": "deep", "Kent": "schooler", "Micah": "krillion", "Nate": "rare", "Noah Goldblatt": "deep", "Owen": "plankton", "Parker": "rare"} },
+      { id: "bryce-ast", short: "Bryce assisted", text: "that Bryce has thrown a goal to", tiers: {"Aashay Rathi": "rare", "Ben Horton": "deep", "Centurion": "deep", "Gavin": "schooler", "Micah": "deep", "Michael": "krillion", "Nate": "schooler", "Neal": "rare", "Oliver": "plankton", "Owen": "rare"} },
+      { id: "to-owen", short: "threw to Owen", text: "who has thrown a goal to Owen", tiers: {"Aashay Rathi": "deep", "Bryce": "rare", "Gavin": "schooler", "Kent": "deep", "Nate": "schooler", "Neal": "rare", "Noah Goldblatt": "krillion", "Oliver": "plankton", "Parker": "rare"} },
+      { id: "bankrun", short: "scored at Bankrun", text: "who scored at Bankrun", tiers: {"Aashay Rathi": "deep", "Andrew Carneiro": "plankton", "Ben Horton": "rare", "Bryce": "schooler", "Centurion": "deep", "Eli Card": "rare", "Gavin": "schooler", "JT": "deep", "Michael": "deep", "Neal": "rare", "Noah Goldblatt": "deep", "Oliver": "rare", "Owen": "rare", "Parker": "schooler", "Ryan B": "krillion"} },
+      { id: "dropped", short: "dropped one", text: "who has dropped a pass this season", tiers: {"Aashay Rathi": "deep", "Ben Horton": "schooler", "Bryce": "schooler", "Carson Jewell": "rare", "Centurion": "deep", "Daniel": "deep", "Gavin": "rare", "JT": "deep", "Matthew": "deep", "Micah": "krillion", "Michael": "rare", "Nate": "rare", "Neal": "rare", "Noah Goldblatt": "schooler", "Oliver": "rare", "Owen": "plankton", "Parker": "schooler"} },
+      { id: "vs-usc", short: "scored vs USC", text: "who scored against USC", tiers: {"Aashay Rathi": "schooler", "Bryce": "rare", "Drake": "deep", "Gavin": "rare", "Kent": "rare", "Micah": "krillion", "Nate": "deep", "Neal": "deep", "Noah Goldblatt": "rare", "Owen": "schooler", "Parker": "plankton"} },
+      { id: "five-goals", short: "5+ goals", text: "with 5 or more goals this season", tiers: {"Aashay Rathi": "rare", "Andrew Carneiro": "rare", "Ben Horton": "deep", "Bryce": "plankton", "Centurion": "krillion", "Gavin": "schooler", "Kent": "rare", "Max": "deep", "Micah": "deep", "Nate": "deep", "Neal": "deep", "Noah Goldblatt": "rare", "Oliver": "rare", "Owen": "schooler", "Parker": "schooler"} },
+    ] },
+];
+
 // Shared backend (Google Apps Script web app, see backend/Code.gs). Paste the /exec URL here after
 // deploying. Empty = local-only mode: the game works but there is no public leaderboard,
 // no cross-device daily lock, and appeals fall back to copy-and-DM.
