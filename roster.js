@@ -51,7 +51,7 @@ window.ROSTER = [
   ["Michael Sun", "schooler", 2026],
   ["Michael Hopfinger", "schooler", 2022],
   ["Mitchell", "clever", 2019],
-  ["Nate", "plankton", 2023],
+  ["Nate", "debris", 2023],
   ["Neal", "plankton", 2024],
   ["Neil Khot", "rare", 2020],
   ["Noah Biggers", "clever", 2026],
