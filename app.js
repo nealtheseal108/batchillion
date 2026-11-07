@@ -282,11 +282,12 @@
   }
   // A round scored against everyone the player had already used. A teammate counts once per
   // player, ever, even when an appeal makes an old answer valid later.
-  // Only Players rounds spend names for good. On a live stat sheet a name counts once per round (so typing
-  // the same teammate seven times isn't free points), and any name is fine again next round. Retired sheets
-  // keep their old rule (any name, any number of times) so rounds already played keep their scores.
+  // Only Players rounds spend names for good. On a stat sheet a name counts once per round (so typing the
+  // same teammate seven times isn't free points), and any name is fine again next round. Sheets I-IV
+  // (legacyReuse) keep their old rule (any name, any number of times) so rounds played there keep their scores.
+  // "retired" only hides a sheet from the picker; it still scores and keeps its leaderboard.
   const spends = (set) => (set || "classes") === "classes";
-  const oncePerRound = (set) => !spends(set) && !setOf(set).retired;
+  const oncePerRound = (set) => !spends(set) && !setOf(set).legacyReuse;
   function scoreRound(answers, used, set, date = dayKey) {
     const inRound = new Set();
     return (Array.isArray(answers) ? answers.slice(0, P.length) : []).map((a, k) => {
@@ -297,7 +298,7 @@
         inRound.add(r.person.key);
         return r;
       }
-      if (!spends(set)) return r;   // retired stat sheets: any name, any number of times
+      if (!spends(set)) return r;   // legacy sheets I-IV: any name, any number of times
       if (used.has(r.person.key)) return { pts: 0, person: r.person, status: `${r.person.full} was already used` };
       used.add(r.person.key);
       return r;
