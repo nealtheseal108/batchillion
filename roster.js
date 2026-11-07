@@ -328,3 +328,30 @@ window.BACKEND_URL = "https://script.google.com/macros/s/AKfycbzC11Mk4p7tqF5vtPY
 window.APPEAL_WHO = "Neal";
 // Playing-time fame cap for stat answers (pt_fame.py): how obvious a stat answer can be.
 window.PT_CAP = {"Aashay Rathi": "schooler", "Andrew Carneiro": "plankton", "Ben Horton": "schooler", "Bryce": "plankton", "Carson Jewell": "schooler", "Centurion": "plankton", "Daniel": "schooler", "Drake": "rare", "Dylan Edwards": "schooler", "Eli Card": "rare", "Elliot": "rare", "Ethan Berson": "rare", "Gavin": "plankton", "JT": "rare", "Jack Herring": "rare", "Kent": "plankton", "King": "rare", "Luke Sellers": "rare", "Matthew Bain": "schooler", "Max": "schooler", "Micah": "plankton", "Michael Sun": "rare", "Nate": "plankton", "Neal": "plankton", "Noah Biggers": "rare", "Noah Goldblatt": "plankton", "Oliver": "plankton", "Owen": "plankton", "Parker": "plankton", "Patrick": "rare", "Peter D": "rare", "Riley": "rare", "Ryan B": "rare", "William": "rare"};
+
+// Full names that count as an exact match for a shorter roster name (from Neal's 2026-27 team list).
+// The roster name stays the same, so rounds already played and the stat-sheet tiers keep working.
+window.ALIASES = {
+ "Neal Parekh": "Neal",
+ "Bryce Jensen": "Bryce",
+ "King Cheung": "King",
+ "Oliver Spiller": "Oliver",
+ "Gavin Blurr": "Gavin",
+ "Nate Scofield": "Nate",
+ "Daniel Rabinovich": "Daniel",
+ "Centurion Tzendzalian": "Centurion",
+ "Riley Fahy": "Riley",
+ "Owen Evans": "Owen",
+ "Drake Parker": "Drake",
+ "Kent Lee": "Kent",
+ "Micah Dubnoff": "Micah",
+ "William Snead": "William",
+ "Patrick Hoover": "Patrick",
+ "Parker Hanson": "Parker",
+ "Max Xu": "Max",
+ "Peter Dillon": "Peter D",
+ "Elliot Jackson-Ontkush": "Elliot",
+ "Ryan Bolden": "Ryan B",
+ "Coleman Stephens": "Coleman",
+ "JT Breeden": "JT"
+};

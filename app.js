@@ -165,7 +165,8 @@
       people.push(mk({ full: String(a.typed).trim().replace(/\b\w/g, (c) => c.toUpperCase()), tier: a.tier, years: yearsOf(a.year), viaAppeal: true }, people.length));
     });
   }
-  const exactOf = (text) => { const k = norm(text); return k ? people.find((p) => p.key === k) : undefined; };
+  const ALIAS = Object.fromEntries(Object.entries(window.ALIASES || {}).map(([a, c]) => [norm(a), norm(c)]));
+  const exactOf = (text) => { const k = norm(text); if (!k) return undefined; const key = ALIAS[k] || k; return people.find((p) => p.key === key); };
   // Edit distance where swapping two neighboring letters counts as one typo ("gaivn" -> "gavin").
   function lev(a, b) {
     const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
