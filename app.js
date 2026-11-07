@@ -584,6 +584,78 @@
     [151, "do you even come to practice?"],
     [0, "get in mitchell's car on the way to tournaments"],
   ];
+  // Every finished round by every player (the leaderboard and the result card both read this).
+  function allRounds() {
+    const names = {}, list = [];
+    remote.plays.forEach((pl) => { names[norm(pl.player)] = names[norm(pl.player)] || pl.player; });
+    Object.values(names).forEach((name) => {
+      const h = history(name);
+      let nToday = 0;
+      h.rounds.forEach((r) => {
+        const isToday = r.date === dayKey; if (isToday) nToday++;
+        if (r.done || r.answers.length >= P.length) list.push({ name, row: r.row, set: r.set || "classes", yards: sum(r.results), date: r.date, isToday, nth: isToday ? nToday : 0 });
+      });
+    });
+    return list;
+  }
+
+  // The result card: one screen, made to be screenshotted. Score, where it sits among today's
+  // throws of the same round type, and each throw's flight up its own lane of a mini field.
+  function scorecard({ tot, verdict, R, res, round, nth }) {
+    const W = 320, H = 92, X = (v) => 10 + (Math.min(700, Math.max(0, v)) / 700) * (W - 20);
+    let pool = [], scope = "today's";
+    if (!practice && round.row) {
+      const mine = allRounds().filter((r) => r.set === (round.set || "classes"));
+      pool = mine.filter((r) => r.isToday);
+      if (pool.length < 3) { pool = mine; scope = "all-time"; }
+    }
+    const others = pool.filter((r) => r.row !== round.row || norm(r.name) !== norm(me.player));
+    const pct = others.length ? Math.round((others.filter((r) => r.yards < tot).length / others.length) * 100) : null;
+    // A smoothed curve of the pool (a sum of bell curves, 30 yards wide), drawn only with 3+ rounds.
+    let curve = "";
+    if (pool.length) {
+      const bins = Array(14).fill(0); pool.forEach((r) => bins[Math.min(13, Math.floor(r.yards / 50))]++);
+      const bmax = Math.max(...bins), bw = (W - 20) / 14;
+      curve += bins.map((c, i) => c ? `<rect class="sc-bar${tot >= i * 50 && (tot < i * 50 + 50 || (i === 13 && tot >= 650)) ? " me" : ""}" x="${(10 + i * bw + 1).toFixed(1)}" width="${(bw - 2).toFixed(1)}" y="${(H - 14 - (c / bmax) * (H - 30)).toFixed(1)}" height="${((c / bmax) * (H - 30)).toFixed(1)}"/>` : "").join("");
+    }
+    if (pool.length >= 3) {
+      const ys = [];
+      for (let v = 0; v <= 700; v += 7) ys.push([v, pool.reduce((a, r) => a + Math.exp(-(((v - r.yards) / 30) ** 2) / 2), 0)]);
+      const top = Math.max(...ys.map(([, y]) => y)) || 1, Y = (y) => H - 14 - (y / top) * (H - 26);
+      const pts = ys.map(([v, y]) => `${X(v).toFixed(1)},${Y(y).toFixed(1)}`).join(" ");
+      curve += `<polyline class="sc-line" points="${pts}"/>`;
+    }
+    const ticks = [0, 100, 200, 300, 400, 500, 600, 700].map((v) => `<line class="sc-tick" x1="${X(v)}" x2="${X(v)}" y1="${H - 14}" y2="${H - 10}"/><text class="sc-tl" x="${X(v)}" y="${H - 1}">${v}</text>`).join("");
+    const you = `<line class="sc-you" x1="${X(tot)}" x2="${X(tot)}" y1="10" y2="${H - 14}"/><circle class="sc-you-dot" cx="${X(tot)}" cy="10" r="3.5"/><text class="sc-you-t" x="${X(tot)}" y="7" text-anchor="${tot > 620 ? "end" : tot < 80 ? "start" : "middle"}">YOU</text>`;
+    const place = others.filter((r) => r.yards > tot).length + 1, nth_ = (n) => n + (["th", "st", "nd", "rd"][(n % 100 >> 3 ^ 1) && n % 10] || "th");
+    const rank = pct == null ? (practice ? "practice round" : `first ${esc(R.title)} round on the board`)
+      : others.length < 9 ? `${nth_(place)} of ${others.length + 1} ${scope} ${esc(R.title)} rounds`
+      : `longer than ${pct}% of ${scope} ${esc(R.title)} rounds`;
+    // Huck log: 7 lanes on a mini field; a throw flies up its lane as far as its points (100 = the end zone).
+    const FH = 150, FW = 320, lane = FW / 7, LY = (pts) => FH - 18 - (Math.min(100, pts) / 100) * (FH - 40);
+    const lines = [0, 25, 50, 75, 100].map((v) => `<line class="hl-yd${v === 100 ? " ez" : ""}" x1="0" x2="${FW}" y1="${LY(v)}" y2="${LY(v)}"/>`).join("");
+    const throws = res.map((r, k) => {
+      const t = r.tier && T[r.tier], cx = lane * k + lane / 2, y = LY(r.pts), c = t ? t.color : "var(--graphite)";
+      return `<line class="hl-path" x1="${cx}" x2="${cx}" y1="${FH - 18}" y2="${y}" style="stroke:${c}"/>
+        <circle class="hl-disc" cx="${cx}" cy="${y}" r="6" style="fill:${c}"/>
+        <text class="hl-pts" x="${cx}" y="${y - 10}">${r.pts}</text>
+        <text class="hl-k" x="${cx}" y="${FH - 4}">${k + 1}</text>`;
+    }).join("");
+    const legend = [...new Set(res.filter((r) => r.tier).map((r) => r.tier))]
+      .sort((a, b) => T[b].pts - T[a].pts).map((k) => `<span><i style="background:${T[k].color}"></i>${esc(T[k].label)}</span>`).join("");
+    return `<section class="scorecard" aria-label="result card">
+      <div class="sc-head"><span>BATCHILLION #${dayNum()}</span><span>${esc(R.title.toUpperCase())}${nth > 0 ? ` · ROUND ${nth}` : ""}</span></div>
+      <div class="sc-score"><b>${tot}</b><span>yds</span></div>
+      <p class="sc-verdict">${esc(verdict)}</p>
+      <svg class="sc-dist" viewBox="0 0 ${W} ${H}" role="img" aria-label="${rank}">${curve}<line class="sc-axis" x1="${X(0)}" x2="${X(700)}" y1="${H - 14}" y2="${H - 14}"/>${ticks}${you}</svg>
+      <p class="sc-rank">${rank}</p>
+      <div class="sc-logh"><span>HUCK LOG</span><span>farther = rarer</span></div>
+      <svg class="sc-log" viewBox="0 0 ${FW} ${FH}" role="img" aria-label="your seven throws">${lines}${throws}</svg>
+      ${legend ? `<div class="sc-legend">${legend}</div>` : ""}
+      <div class="sc-foot">${esc((location.host + location.pathname).replace(/\/$/, ""))}</div>
+    </section>`;
+  }
+
   const SQUARES = { debris: "🟤", plankton: "⬜", clever: "🟫", schooler: "🟦", rare: "🟥", deep: "🟪", krillion: "🟨" };
 
   function finish(row, practiceAnswers = null, practiceSet = "classes") {
@@ -605,10 +677,10 @@
     const st = h ? streak(me.player) : 0;
     show(`
       <div class="card">
-        <p class="kicker">BATCHILLION #${dayNum()} · ${esc(R.title.toUpperCase())}${nth > 0 ? ` · ROUND ${nth} TODAY` : ""}${st ? ` · STREAK ${st}` : ""}</p>
-        <p class="prompt">You threw it <em>${tot}</em> yards</p>
-        <p class="verdict">${esc(verdict)}</p>
+        ${scorecard({ tot, verdict, R, res, round, nth })}
+        ${st ? `<p class="kicker">STREAK ${st}</p>` : ""}
         ${h ? `<p class="hint">Today: ${today.rounds.length} round${today.rounds.length === 1 ? "" : "s"}, ${today.yards} yards. ${left ? `${left} teammate${left > 1 ? "s" : ""} left for you in Players.` : "You've used every teammate in Players."} ${spends(round.set) ? "" : "Stat sheets: reuse any name."}</p>` : ""}
+        <details class="answers"><summary>your answers</summary>
         <ul class="recap">${res.map((r) => {
           const t = r.tier && T[r.tier];
           const ap = myAppeal && Number(myAppeal.prompt) === r.k ? `<span class="pending">appeal ${myAppeal.tier ? (myAppeal.tier === "reject" ? "rejected" : "ranked") : "pending"}</span>` : "";
@@ -617,7 +689,7 @@
             <div class="a">${esc(r.person ? r.person.full : r.a.typed || "no answer")} <span class="tag">${t ? esc(t.label) : esc(r.status)}</span> ${ap}</div>
             ${appealable(r) ? `<button class="chip" data-appeal="${r.k}" type="button">appeal this name</button>` : ""}</div>
             <div class="p">${r.pts}</div></li>`;
-        }).join("")}</ul>
+        }).join("")}</ul></details>
         ${res.some(appealable) ? `<p class="hint">You get one appeal a day. ${esc(window.APPEAL_WHO)} ranks it and your score updates.</p>` : ""}
         <div class="row">
           ${!R.retired && (left || !spends(round.set)) ? `<button class="btn" id="again" type="button">another ${esc(R.title.toLowerCase())}</button>` : ""}
@@ -660,18 +732,7 @@
     }
     buildRoster();
     // One row per finished round (not per player): best single rounds win. Today = rounds thrown today.
-    const names = {};
-    remote.plays.forEach((pl) => { names[norm(pl.player)] = names[norm(pl.player)] || pl.player; });
-    let list = [];
-    Object.values(names).forEach((name) => {
-      const h = history(name);
-      let nToday = 0;
-      h.rounds.forEach((r) => {
-        const isToday = r.date === dayKey; if (isToday) nToday++;
-        if (r.done || r.answers.length >= P.length) list.push({ name, set: r.set, yards: sum(r.results), date: r.date, isToday, nth: isToday ? nToday : 0 });
-      });
-    });
-    list = list.filter((r) => (r.set || "classes") === set);
+    let list = allRounds().filter((r) => r.set === set);
     if (view === "today") list = list.filter((r) => r.isToday);
     list.sort((a, b) => b.yards - a.yards || a.name.localeCompare(b.name));
     list = list.slice(0, 50);

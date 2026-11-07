@@ -428,3 +428,39 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
 .dlg-tabs { display: grid; gap: 8px; }
 .lb-sets { gap: 6px; }
 .lb-sets .chip.on { background: var(--navy); color: var(--white); }
+
+/* result card: one screen, made to be screenshotted (navy panel, like the home kit's print) */
+.scorecard { background: var(--navy); color: var(--white); border-radius: 12px; padding: 16px 18px 12px; margin: 0 0 16px;
+  box-shadow: inset 0 0 0 2px var(--navy), inset 0 0 0 4px var(--carolina); display: grid; gap: 6px; }
+.sc-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font: 800 13px/1.2 var(--num); letter-spacing: .2em; color: var(--carolina); }
+.sc-score { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; }
+.sc-score b { font: 800 clamp(64px, 17vw, 92px)/.9 var(--num); letter-spacing: .01em; font-variant-numeric: tabular-nums; }
+.sc-score span { font: 800 22px/1 var(--num); letter-spacing: .12em; color: var(--carolina); text-transform: uppercase; }
+.sc-verdict { margin: 0; font: italic 700 16px/1.3 var(--script); text-wrap: balance; }
+.sc-dist, .sc-log { width: 100%; height: auto; display: block; overflow: visible; }
+.sc-area { fill: var(--carolina); opacity: .28; }
+.sc-line { fill: none; stroke: var(--carolina); stroke-width: 2; stroke-linejoin: round; }
+.sc-axis, .sc-tick { stroke: var(--band-wm); stroke-width: 1; opacity: .7; }
+.sc-tl { fill: var(--band-wm); font: 700 9px var(--num); letter-spacing: .05em; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.sc-you { stroke: var(--white); stroke-width: 2; }
+.sc-you-dot { fill: var(--white); }
+.sc-you-t { fill: var(--white); font: 800 10px var(--num); letter-spacing: .15em; }
+.sc-rank { margin: 0; font: 800 14px/1.2 var(--num); letter-spacing: .14em; text-transform: uppercase; color: var(--carolina); }
+.sc-logh { display: flex; justify-content: space-between; border-top: 1px dashed rgba(141, 187, 220, .45); padding-top: 8px; margin-top: 4px;
+  font: 800 12px/1 var(--num); letter-spacing: .2em; color: var(--band-wm); text-transform: uppercase; }
+.hl-yd { stroke: rgba(141, 187, 220, .35); stroke-width: 1; stroke-dasharray: 3 4; }
+.hl-yd.ez { stroke: var(--carolina); stroke-dasharray: none; opacity: .8; }
+.hl-path { stroke-width: 2; opacity: .85; }
+.hl-disc { stroke: var(--white); stroke-width: 1.5; }
+.hl-pts { fill: var(--white); font: 800 11px var(--num); text-anchor: middle; font-variant-numeric: tabular-nums; }
+.hl-k { fill: var(--band-wm); font: 700 10px var(--num); text-anchor: middle; }
+.sc-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 600 12px/1.2 var(--text); color: var(--carolina-tint); }
+.sc-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; box-shadow: 0 0 0 1.5px var(--white); vertical-align: -1px; }
+.sc-foot { font: 700 11px/1 var(--num); letter-spacing: .14em; color: var(--band-wm); text-align: right; text-transform: lowercase; }
+@media (max-height: 700px) { .sc-score b { font-size: 60px; } .scorecard { gap: 4px; padding: 12px 14px 10px; } }
+.sc-rug { stroke: var(--carolina); stroke-width: 2; opacity: .8; }
+.sc-bar { fill: var(--carolina); opacity: .3; }
+.sc-bar.me { opacity: .6; }
+.answers { margin: 0 0 14px; }
+.answers > summary { cursor: pointer; font: 800 14px/1.2 var(--num); letter-spacing: .16em; text-transform: uppercase; color: var(--graphite); padding: 6px 0 10px; list-style-position: inside; }
+.answers[open] > summary { color: var(--navy); }
