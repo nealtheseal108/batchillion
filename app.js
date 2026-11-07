@@ -282,12 +282,22 @@
   }
   // A round scored against everyone the player had already used. A teammate counts once per
   // player, ever, even when an appeal makes an old answer valid later.
-  // Only Players rounds spend names. Stat sheets let you name anyone again, so they skip the check.
+  // Only Players rounds spend names for good. On a live stat sheet a name counts once per round (so typing
+  // the same teammate seven times isn't free points), and any name is fine again next round. Retired sheets
+  // keep their old rule (any name, any number of times) so rounds already played keep their scores.
   const spends = (set) => (set || "classes") === "classes";
+  const oncePerRound = (set) => !spends(set) && !setOf(set).retired;
   function scoreRound(answers, used, set, date = dayKey) {
+    const inRound = new Set();
     return (Array.isArray(answers) ? answers.slice(0, P.length) : []).map((a, k) => {
       const r = score(a, k, set, date);
-      if (!r.person || !spends(set)) return r;   // stat sheets: any name, any number of times
+      if (!r.person) return r;
+      if (oncePerRound(set)) {
+        if (inRound.has(r.person.key)) return { pts: 0, person: r.person, status: `${r.person.full} already counted this round` };
+        inRound.add(r.person.key);
+        return r;
+      }
+      if (!spends(set)) return r;   // retired stat sheets: any name, any number of times
       if (used.has(r.person.key)) return { pts: 0, person: r.person, status: `${r.person.full} was already used` };
       used.add(r.person.key);
       return r;
@@ -468,8 +478,8 @@
       <div class="card">
         <p class="kicker">BATCHILLION #${dayNum()}${practice ? " · PRACTICE" : ""}${st ? ` · STREAK ${st}` : ""}</p>
         <p class="prompt">You're up, <em>${esc(me.player)}</em>. Pick a round. The rarer the pick, the deeper the huck.</p>
-        <p class="hint">${today.rounds.length ? `Today: ${today.rounds.length} round${today.rounds.length > 1 ? "s" : ""}, ${today.yards} yards. ` : ""}Players: ${left ? `${left} teammate${left > 1 ? "s" : ""} left for you; a name you use there is gone for good.` : "you've used every teammate."} Stat sheets: reuse any name, any time.</p>
-        <div class="picks">${openRounds().map((r, i) => `<button class="btn pick${i ? " ghost" : ""}" data-set="${r.id}" type="button" ${spends(r.id) && !left ? "disabled" : ""}><span>${esc(r.title)}${r.unlock ? ' <b class="new">new</b>' : ""}</span><small>${spends(r.id) ? "names are gone for good" : "reuse any name"}</small><small>max ${maxFor(r.id, h.used)} yds</small></button>`).join("")}</div>
+        <p class="hint">${today.rounds.length ? `Today: ${today.rounds.length} round${today.rounds.length > 1 ? "s" : ""}, ${today.yards} yards. ` : ""}Players: ${left ? `${left} teammate${left > 1 ? "s" : ""} left for you; a name you use there is gone for good.` : "you've used every teammate."} Stat sheets: any name, once per round.</p>
+        <div class="picks">${openRounds().map((r, i) => `<button class="btn pick${i ? " ghost" : ""}" data-set="${r.id}" type="button" ${spends(r.id) && !left ? "disabled" : ""}><span>${esc(r.title)}${r.unlock ? ' <b class="new">new</b>' : ""}</span><small>${spends(r.id) ? "names are gone for good" : "a name counts once per round"}</small><small>max ${maxFor(r.id, h.used)} yds</small></button>`).join("")}</div>
         <div class="row"><button class="linkish" id="out" type="button">not ${esc(me.player)}? sign out</button></div>
       </div>`);
     const first = stage.querySelector("[data-set]"); if (first) first.focus();
@@ -483,7 +493,7 @@
   function maxFor(id, used) {
     const R = setOf(id), pts = (q, p) => T[tierFor(q, p, id, R.prompts.indexOf(q), dayKey)].pts;
     const C = R.prompts.map((q) => people.filter((p) => fits(q, p) && (!spends(id) || !used.has(p.key))).sort((a, b) => pts(q, b) - pts(q, a)).slice(0, 7));
-    if (!spends(id)) return C.reduce((s, c, k) => s + (c.length ? pts(R.prompts[k], c[0]) : 0), 0);
+    if (!spends(id) && !oncePerRound(id)) return C.reduce((s, c, k) => s + (c.length ? pts(R.prompts[k], c[0]) : 0), 0);
     const top = C.map((c, k) => (c.length ? pts(R.prompts[k], c[0]) : 0));
     let best = 0;
     const go = (k, taken, sum) => {
@@ -530,6 +540,7 @@
     const results = scoreRound(answers, new Set(prior), set);
     const used = spends(set) ? new Set(prior) : new Set();
     if (spends(set)) results.forEach((r) => r.person && used.add(r.person.key));
+    else if (oncePerRound(set)) results.forEach((r) => r.person && r.pts && used.add(r.person.key));
     resetField(results);
     // The clock lives in storage, so reloading mid-prompt does not buy a fresh 30 seconds.
     let clock = practice ? null : ls.get(clockKey(), null);
@@ -540,7 +551,7 @@
     const left = people.filter((p) => fits(PR[i], p) && !used.has(p.key)).length;
     show(`
       <div class="card">
-        <p class="kicker">${spends(set) ? `PROMPT ${i + 1} / ${PR.length} · ${left} LEFT FOR YOU` : `${esc(R.title.toUpperCase())} · PROMPT ${i + 1} / ${PR.length} · REUSE ANY NAME`}</p>
+        <p class="kicker">${spends(set) ? `PROMPT ${i + 1} / ${PR.length} · ${left} LEFT FOR YOU` : `${esc(R.title.toUpperCase())} · PROMPT ${i + 1} / ${PR.length} · ONE USE PER NAME`}</p>
         <p class="prompt">Name a BatCH teammate <em>${esc(PR[i].text)}</em></p>
         <div class="clock" id="clk"><span class="secs" id="secs">${LIMIT}</span><div class="timer" id="tm"><i></i></div></div>
         <form class="row" id="f" autocomplete="off">
@@ -584,7 +595,7 @@
           lastReject = raw; // kept so it can be appealed after the round
           return drop(`"${raw}" isn't on the roster. try again`);
         }
-        if (used.has(ex.key)) return drop(`${ex.full} is already used in Players. ever. pick someone else`);
+        if (used.has(ex.key)) return drop(spends(set) ? `${ex.full} is already used in Players. ever. pick someone else` : `${ex.full} already counted this round. pick someone else`);
         if (!catches) return drop(PR[i].tierOf ? `${ex.full} doesn't fit this one. try again` : `${ex.full} didn't start ${PR[i].short}. try again`);
       }
       locked = true; stopTimer();
@@ -749,7 +760,7 @@
       <div class="card">
         ${scorecard({ tot, verdict, R, res, round, nth })}
         ${st ? `<p class="kicker">STREAK ${st}</p>` : ""}
-        ${h ? `<p class="hint">Today: ${today.rounds.length} round${today.rounds.length === 1 ? "" : "s"}, ${today.yards} yards. ${left ? `${left} teammate${left > 1 ? "s" : ""} left for you in Players.` : "You've used every teammate in Players."} ${spends(round.set) ? "" : "Stat sheets: reuse any name."}</p>` : ""}
+        ${h ? `<p class="hint">Today: ${today.rounds.length} round${today.rounds.length === 1 ? "" : "s"}, ${today.yards} yards. ${left ? `${left} teammate${left > 1 ? "s" : ""} left for you in Players.` : "You've used every teammate in Players."} ${spends(round.set) ? "" : "Stat sheets: any name, once per round."}</p>` : ""}
         <details class="answers"><summary>your answers</summary>
         <ul class="recap">${res.map((r) => {
           const t = r.tier && T[r.tier];
