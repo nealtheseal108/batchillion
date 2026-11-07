@@ -1,6 +1,6 @@
 (() => {
   const FAST = !!window.BH_FAST;            // test switch for the fuzz bot: instant throws, short clock
-  const SECONDS = FAST ? 3 : 30;
+  const SECONDS = FAST ? 3 : 40;
   const ZONE = "America/New_York"; // the day flips at midnight Eastern for everyone
   const $ = (s) => document.querySelector(s);
   const stage = $("#stage");
@@ -543,10 +543,10 @@
     if (spends(set)) results.forEach((r) => r.person && used.add(r.person.key));
     else if (oncePerRound(set)) results.forEach((r) => r.person && r.pts && used.add(r.person.key));
     resetField(results);
-    // The clock lives in storage, so reloading mid-prompt does not buy a fresh 30 seconds.
+    // The clock lives in storage, so reloading mid-prompt does not buy a fresh 40 seconds.
     let clock = practice ? null : ls.get(clockKey(), null);
     if (!clock || clock.i !== i || clock.row !== row) { clock = { row, i, t0: Date.now() }; if (!practice) ls.set(clockKey(), clock); }
-    const LIMIT = SECONDS;   // 30s for every round type
+    const LIMIT = SECONDS;   // 40s for every round type
     const deadline = clock.t0 + LIMIT * 1000;
     let locked = false, lastReject = "";
     // Stat sheets: a few guesses per prompt, more when fewer answers fit (a harder question):

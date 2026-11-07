@@ -1,6 +1,7 @@
 // Footer music: the same playlist and player as the World Cup site, through YouTube's IFrame API.
 // Fades in and out between songs, prev / play-pause / next / loop-one, skips anything that won't
-// embed. Starts on the first tap anywhere unless this viewer turned the music off before.
+// embed. Music is on by default: it tries to start right away and, where the browser blocks sound
+// until you interact, starts on the first tap or key press. Pausing turns it off for this visit only.
 (() => {
   const MUSIC = [
     { id: "K4Fk9Clc12w", title: "Shotput (slowed + reverb)", artist: "Still Woozy" },
@@ -18,9 +19,11 @@
   const MAXVOL = 45, FADE_MS = 2500, FADE_TICK = 80;
   const $ = (s) => document.querySelector(s);
   if (!$("#tunes")) return; // a cached older page without the player: do nothing rather than crash
+  // Off lasts for this visit only (Neal: music on by default); the old forever-off setting is dropped.
+  try { localStorage.removeItem("bh:music"); } catch {}
   const pref = {
-    get() { try { return localStorage.getItem("bh:music"); } catch { return null; } },
-    set(v) { try { localStorage.setItem("bh:music", v); } catch {} },
+    get() { try { return sessionStorage.getItem("bh:music"); } catch { return null; } },
+    set(v) { try { sessionStorage.setItem("bh:music", v); } catch {} },
   };
 
   let player = null, ready = false, on = false, wanted = false, idx = 0, repeatOne = false, fadeTimer = null, endWatch = null;
@@ -109,11 +112,16 @@
   $("#pbPrev").onclick = () => { pref.set("on"); prev(); };
   $("#pbLoop").onclick = () => { repeatOne = !repeatOne; paint(); };
 
-  // Like the World Cup site: the first tap anywhere starts the music, unless this viewer paused it before.
-  if (pref.get() !== "off") document.addEventListener("pointerdown", function first(e) {
-    document.removeEventListener("pointerdown", first, true);
-    if (!tunes.contains(e.target)) start();
-  }, true);
+  // On by default: ask to play as soon as the player is ready; browsers that block sound until the
+  // first interaction get it on the first tap or key press instead (unless paused this visit).
+  if (pref.get() !== "off") {
+    wanted = true;
+    const first = (e) => {
+      document.removeEventListener("pointerdown", first, true); document.removeEventListener("keydown", first, true);
+      if (!(e.target && tunes.contains(e.target))) start();
+    };
+    document.addEventListener("pointerdown", first, true); document.addEventListener("keydown", first, true);
+  }
 
   paint();
 })();
