@@ -220,6 +220,9 @@ function doPost(e) {
       if (!r && b.action === "play") r = mineAll.find((x) => day_(x.date) === date && !isDone(x));   // older pages
       if (!r) { sh.appendRow([text_(date), cell_(name), "", new Date(), ""]); r = { _row: sh.getLastRow(), submittedAt: "" }; }
       if (isDone(r)) return json_({ ok: false, error: "that round is closed" });
+      // Saves can land out of order; a round only ever grows, so an older, shorter save is ignored.
+      const stored = r.answers !== undefined ? parse_(r.answers) : [];
+      if (b.answers.length < stored.length) return json_({ ok: true, done: false, answers: stored, stale: true });
       const answers = cleanAnswers_(b.answers, player, r._row, plays);
       sh.getRange(r._row, 3).setValue(JSON.stringify(answers));
       const done = answers.length >= PROMPTS;
