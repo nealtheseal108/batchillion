@@ -627,6 +627,38 @@
     if (practice || !row) return Promise.resolve({ ok: true });
     return post({ action: "throw", date: dayKey, player: me.player, token: me.token, row, answers: all });
   }
+  // Why an answer landed in its tier, in one or two plain sentences under the caption.
+  function whyTier(set, k, person, tier, date) {
+    const q = setOf(set).prompts[k], lbl = (t) => T[t].label;
+    if (!q || !person || !tier) return "";
+    if (!q.tierOf) return `${person.full} is ranked ${lbl(tier)} on the BatCH roster, by how many teammates would think of them.`;
+    const vOf = q.v ? Object.fromEntries(Object.entries(q.v).map(([n, v]) => [norm(n), v])) : null;
+    const n = Object.keys(q.tierOf).length;
+    let out = "";
+    if (vOf && vOf[person.key] != null) {
+      const vals = Object.values(vOf), v = vOf[person.key];
+      const pct = q.ratio && vals.every((x) => x <= 1);
+      const fmt = (x) => (pct ? `${Math.round(x * 100)}%` : q.ratio ? (+x).toFixed(2) : String(x));
+      const more = vals.filter((x) => x > v).length, same = vals.filter((x) => x === v).length - 1, less = vals.filter((x) => x < v).length;
+      const where = !more ? (same ? `tied for the most with ${same} other${same > 1 ? "s" : ""}` : "the most")
+        : !less ? (same ? `tied for the fewest with ${same} other${same > 1 ? "s" : ""}` : "the fewest")
+        : `${more + 1}${["th", "st", "nd", "rd"][((more + 1) % 100 >> 3 ^ 1) && (more + 1) % 10] || "th"} highest`;
+      out = `${person.full}: ${fmt(v)}, ${where} of the ${n} teammates who fit.`;
+    } else out = `${n} teammates fit this one.`;
+    const reason = { plankton: "That's the most obvious answer, so plankton.", schooler: "An average answer, so schooler.",
+      rare: "Below the middle of the pack, so rare.", deep: "Right near the bottom, so a deep cut.",
+      krillion: "Nobody else is this far down, so one in a batchillion." }[tier] || "";
+    out += " " + reason;
+    if (q.ratio) out += " Ratio questions also weigh points played, so big-minutes players count as more obvious.";
+    if (q.obOf) {   // the playing-time cap: would the numbers alone have made them more obvious?
+      const raw = tierize(q.obOf)[person.key], c = capOf(person.key);
+      if (raw && ORDER.indexOf(raw) < ORDER.indexOf(tier) && tier === c)
+        out += ` By the numbers alone they'd be ${lbl(raw)}, but ${c === "rare" ? "they play fewer minutes than most" : "they play about average minutes"}, so they can't be more obvious than ${lbl(c)}.`;
+    }
+    if (crowdTiers(set, date)) out += " Tiers here also lean on what players typed on earlier days.";
+    return out;
+  }
+
   async function reveal(all, before, row, set = "classes") {
     const k = all.length - 1, ans = all[k];
     if (!practice) { ls.set(draftKey(), { row, set, answers: all }); if (all.length < P.length) sendThrows(row, all); }
@@ -646,7 +678,7 @@
       <div class="card result${t ? "" : " miss"}" role="status" style="--c:${t ? t.color : "var(--graphite)"}">
         <p class="kicker">PROMPT ${all.length} / ${P.length}${goal ? " · GOAL" : ""}</p>
         <p class="who">${esc(r.person ? r.person.full : ans.typed || ans.reused || "no answer")}</p>
-        ${t ? `<span class="tier">${esc(t.label)}</span><p class="yds">${t.pts} <small>pts${t.pts >= 100 ? " · caught in the end zone" : ""}</small></p><p class="cap">${esc(cap)}</p>`
+        ${t ? `<span class="tier">${esc(t.label)}</span><p class="yds">${t.pts} <small>pts${t.pts >= 100 ? " · caught in the end zone" : ""}</small></p><p class="cap">${esc(cap)}</p><p class="why">${esc(whyTier(set, k, r.person, r.tier, dayKey))}</p>`
             : `<p class="yds">0 <small>pts</small></p><p class="cap">${esc(window.ZERO_CAPTION)}</p><p class="small">${esc(r.status)}${ans.typed && !r.person ? " · you can appeal one name at the end" : ""}</p>`}
         <div class="row"><button class="btn" id="next" type="button">${last ? "see how far you threw it" : "next pull"}</button></div>
       </div>`);
