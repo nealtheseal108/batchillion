@@ -626,34 +626,64 @@
     if (practice || !row) return Promise.resolve({ ok: true });
     return post({ action: "throw", date: dayKey, player: me.player, token: me.token, row, answers: all });
   }
-  // Why an answer landed in its tier, in one or two plain sentences under the caption.
+  // Why an answer landed in its tier, in plain sentences that stand on their own: what the person
+  // actually did on this question, how that ranks, and which rule set the tier.
+  function statSentence(q, name, v) {
+    const pl = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    const pct = (x) => `${Math.round(x * 100)}%`;
+    const every = (x) => (x > 0 ? `once every ${(1 / x).toFixed(1).replace(/\.0$/, "")}` : "never");
+    let t = String(q.text || "").replace(/^who\s+/, "").replace(/\s*\([^)]*\)/g, "").replace(/\s+/g, " ").trim();
+    const ctx = (rest) => rest.replace(/^\s+/, "").replace(/\s+$/, "");
+    let m;
+    if ((m = t.match(/^completed \d+% or more of their throws(.*)$/))) return `${name} completed ${pct(v)} of their throws${m[1]}`;
+    if ((m = t.match(/^caught \d+% or more of the passes thrown to them(.*)$/))) return `${name} caught ${pct(v)} of the passes thrown to them${m[1].replace(/, drops counted/, "")}`;
+    if ((m = t.match(/^caught a goal on \d+% or more of their catches(.*)$/))) return `${name} caught a goal on ${pct(v)} of their catches${m[1]}`;
+    if ((m = t.match(/^threw an assist on \d+% or more of their completed throws(.*)$/))) return `${name} threw an assist on ${pct(v)} of their completed throws${m[1]}`;
+    if ((m = t.match(/^threw it away on \d+% or more of their throws(.*)$/))) return `${name} threw it away on ${pct(v)} of their throws${m[1]}`;
+    if ((m = t.match(/^averaged at least one touch per (O|D) point they played(.*)$/))) return `${name} averaged ${(+v).toFixed(2)} touches per ${m[1]} point${m[2]}`;
+    if ((m = t.match(/^got a D at least once every \d+ D points they played(.*)$/))) return `${name} got a D ${every(v)} D points they played${m[1]}`;
+    if ((m = t.match(/^(caught the disc|caught a goal|touched the disc|got a D|threw an assist) at least once every \d+ (D |O )?points they played(.*)$/))) return `${name} ${m[1]} ${every(v)} ${m[2] || ""}points they played${m[3]}`;
+    if ((m = t.match(/^touched the disc(?: \d+ or more times)?(.*)$/))) return `${name} touched the disc ${pl(v, "time", "times")}${m[1]}`;
+    if ((m = t.match(/^caught the disc(?: \d+ or more times)?(.*)$/))) return `${name} caught the disc ${pl(v, "time", "times")}${m[1]}`;
+    if ((m = t.match(/^(?:has )?made (?:\d+ or more )?catches(.*)$/))) return `${name} made ${pl(v, "catch", "catches")}${m[1]}`;
+    if ((m = t.match(/^(?:has )?completed (?:\d+ or more throws|a throw)(.*)$/))) return `${name} completed ${pl(v, "throw", "throws")}${m[1]}`;
+    if ((m = t.match(/^caught a pass from (.+)$/))) return `${name} caught ${pl(v, "pass", "passes")} from ${m[1]}`;
+    if ((m = t.match(/^completed a pass to (.+)$/))) return `${name} completed ${pl(v, "pass", "passes")} to ${m[1]}`;
+    if ((m = t.match(/^caught a goal from (.+)$/))) return `${name} caught ${pl(v, "goal", "goals")} from ${m[1]}`;
+    if ((m = t.match(/^played (?:\d+ or more points )?in (.+)$/))) return `${name} played ${pl(v, "point", "points")} in ${m[1]}`;
+    if ((m = t.match(/^(?:has )?caught (?:\d+ or more goals|a goal)(.*)$/))) return `${name} caught ${pl(v, "goal", "goals")}${m[1]}`;
+    if ((m = t.match(/^(?:has )?(?:gotten (?:\d+ or more )?Ds|got a D)(?: \(blocks\))?(.*)$/))) return `${name} got ${pl(v, "D", "Ds")}${m[1]}`;
+    if ((m = t.match(/^(?:has )?thrown (?:\d+ or more )?throwaways(.*)$/))) return `${name} threw ${pl(v, "throwaway", "throwaways")}${m[1]}`;
+    if ((m = t.match(/^(?:has )?thrown (?:\d+ or more )?assists(.*)$/))) return `${name} threw ${pl(v, "assist", "assists")}${m[1]}`;
+    if ((m = t.match(/^threw an assist(.*)$/))) return `${name} threw ${pl(v, "assist", "assists")}${m[1]}`;
+    if ((m = t.match(/^made more catches than completed throws(.*)$/))) return `${name} made ${pl(v, "more catch", "more catches")} than completed throws${m[1]}`;
+    if ((m = t.match(/^completed more throws than they caught(.*)$/))) return `${name} completed ${pl(v, "more throw", "more throws")} than they caught${m[1]}`;
+    if ((m = t.match(/^dropped \d+% or more of the passes thrown to them(.*)$/))) return `${name} dropped ${pct(v)} of the passes thrown to them${m[1]}`;
+    if ((m = t.match(/^(?:has )?dropped a pass(.*)$/))) return `${name} dropped ${pl(v, "pass", "passes")}${m[1]}`;
+    if ((m = t.match(/^pulled(?: \d+ or more times)?(.*)$/))) return `${name} pulled ${pl(v, "time", "times")}${m[1]}`;
+    if ((m = t.match(/^threw it away(?: \d+ or more times)?(.*)$/))) return `${name} threw it away ${pl(v, "time", "times")}${m[1]}`;
+    return `${name}'s number on this question is ${q.ratio ? (+v).toFixed(2) : v}`;
+  }
   function whyTier(set, k, person, tier, date) {
-    const q = setOf(set).prompts[k], lbl = (t) => T[t].label;
+    const q = setOf(set).prompts[k], lbl = (t) => T[t].label, name = person && person.full;
     if (!q || !person || !tier) return "";
-    if (!q.tierOf) return `${person.full} is ranked ${lbl(tier)} on the BatCH roster, by how many teammates would think of them.`;
+    if (!q.tierOf) return `${name} is ranked ${lbl(tier)} on the BatCH roster, by how many teammates would think of them.`;
     const vOf = q.v ? Object.fromEntries(Object.entries(q.v).map(([n, v]) => [norm(n), v])) : null;
     const n = Object.keys(q.tierOf).length;
     let out = "";
     if (vOf && vOf[person.key] != null) {
       const vals = Object.values(vOf), v = vOf[person.key];
-      const pct = q.ratio && vals.every((x) => x <= 1);
-      const fmt = (x) => (pct ? `${Math.round(x * 100)}%` : q.ratio ? (+x).toFixed(2) : String(x));
       const more = vals.filter((x) => x > v).length, same = vals.filter((x) => x === v).length - 1, less = vals.filter((x) => x < v).length;
       const where = !more ? (same ? `tied for the most with ${same} other${same > 1 ? "s" : ""}` : "the most")
         : !less ? (same ? `tied for the fewest with ${same} other${same > 1 ? "s" : ""}` : "the fewest")
-        : `${more + 1}${["th", "st", "nd", "rd"][((more + 1) % 100 >> 3 ^ 1) && (more + 1) % 10] || "th"} highest`;
-      out = `${person.full}: ${fmt(v)}, ${where} of the ${n} teammates who fit.`;
+        : `${more + 1}${["th", "st", "nd", "rd"][((more + 1) % 100 >> 3 ^ 1) && (more + 1) % 10] || "th"} of ${n}`;
+      out = `${statSentence(q, name, v)}: ${where}${!more || !less ? ` of the ${n} teammates who fit` : " teammates who fit"}.`;
     } else out = `${n} teammates fit this one.`;
-    const reason = { plankton: "That's in the top 20% most obvious answers, so plankton.", schooler: "That's in the next 40%, so schooler.",
-      rare: "That's in the next 25%, so rare.", deep: "That's in the bottom 15%, so a deep cut.",
-      krillion: "Nobody else is this far down, so one in a batchillion." }[tier] || "";
-    out += " " + reason;
-    if (q.ratio) out += " Ratio questions also weigh points played, so big-minutes players count as more obvious.";
-    if (q.obOf) {   // the playing-time cap: would the numbers alone have made them more obvious?
-      const raw = tierize(q.obOf)[person.key], c = capOf(person.key);
-      if (raw && ORDER.indexOf(raw) < ORDER.indexOf(tier) && tier === c)
-        out += ` By the numbers alone they'd be ${lbl(raw)}, but ${c === "rare" ? "they play fewer minutes than most" : "they play about average minutes"}, so they can't be more obvious than ${lbl(c)}.`;
-    }
+    const raw = q.obOf ? tierize(q.obOf)[person.key] : null, c = capOf(person.key);
+    const capped = raw && ORDER.indexOf(raw) < ORDER.indexOf(tier) && tier === c;
+    if (capped) out += ` That alone would make them ${lbl(raw)}, but ${name} plays ${c === "rare" ? "fewer minutes than most" : "about average minutes"} this season, so the highest they can be is ${lbl(c)}.`;
+    else if (tier === "krillion") out += " Nobody else is that low, so one in a batchillion.";
+    else out += ` Ranked against everyone who fits${q.ratio ? " (points played count too on ratio questions)" : ""}, that's in the ${{ plankton: "top 20%", schooler: "next 40%", rare: "next 25%", deep: "bottom 15%" }[tier]}, so ${lbl(tier)}.`;
     if (crowdTiers(set, date)) out += " Tiers here also lean on what players typed on earlier days.";
     return out;
   }
