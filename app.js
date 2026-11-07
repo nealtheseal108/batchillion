@@ -683,14 +683,25 @@
     const raw = q.obOf ? tierize(q.obOf)[person.key] : null, c = capOf(person.key);
     const capped = raw && ORDER.indexOf(raw) < ORDER.indexOf(tier) && tier === c;
     if (capped) out += ` That alone would make them ${lbl(raw)}, but ${name} plays ${c === "rare" ? "fewer minutes than most" : "about average minutes"} this season, so the highest they can be is ${lbl(c)}.`;
-    else if (tier === "krillion") out += " Nobody else is that low, so one in a batchillion.";
-    else {
-      const band = { plankton: "top 20%", schooler: "next 40%", rare: "next 25%", deep: "bottom 15%" }[tier];
-      const tiedN = vOf && vOf[person.key] != null ? Object.values(vOf).filter((x) => x === vOf[person.key]).length : 1;
-      out += tiedN > 1
-        ? ` Everyone tied at that number shares one tier, and that group of ${tiedN} starts in the ${band} of the ranking${q.ratio ? " (points played count too on ratio questions)" : ""}, so ${lbl(tier)}.`
-        : ` Ranked against everyone who fits${q.ratio ? " (points played count too on ratio questions)" : ""}, that's in the ${band}, so ${lbl(tier)}.`;
-    }
+    else if (tier === "krillion") out += " Nobody else is that low on this question, so one in a batchillion.";
+    else if (q.obOf && q.obOf[person.key] != null) {
+      // Spell out the ranking: where they sit, the spot ranges for each tier, and why not the next tier down.
+      const ob = q.obOf, me = ob[person.key], all = Object.values(ob);
+      const lows = all.filter((x) => x === Math.min(...all)).length, kr = lows === 1 && all.length > 1;
+      const m = all.length - (kr ? 1 : 0), up = (x) => Math.ceil(x - 1e-9);
+      const c1 = up(0.2 * m), c2 = up(0.6 * m), c3 = up(0.85 * m);
+      const pos = all.filter((x) => x > me).length + 1, tied = all.filter((x) => x === me).length;
+      const span = (a, b) => (a > b ? "" : a === b ? `${a}` : `${a}–${b}`);
+      const ranges = [["plankton", 1, c1], ["schooler", c1 + 1, c2], ["rare", c2 + 1, c3], ["deep cut", c3 + 1, m]]
+        .filter(([, a, b]) => a <= b).map(([t, a, b]) => `${span(a, b)} ${t}`).join(", ");
+      const basis = q.ratio ? " (the stat plus points played)" : "";
+      out += tied > 1
+        ? ` On this question's ranking${basis} those ${tied} share spots ${pos}–${pos + tied - 1} of ${m}. Tied people share one tier, and their group starts at spot ${pos}.`
+        : ` On this question's ranking${basis}, ${name} is spot ${pos} of ${m}.`;
+      out += ` Spots ${ranges}${kr ? ", and the single lowest is the one in a batchillion" : ""}, so ${tied > 1 ? "they're all" : "that's"} ${lbl(tier)}.`;
+      const nextDown = { plankton: ["schooler", c1 + 1], schooler: ["rare", c2 + 1], rare: ["deep cut", c3 + 1] }[tier];
+      if (nextDown && nextDown[1] <= m) out += ` Not a ${nextDown[0]}, because ${tied > 1 ? "the group starts" : "they're"} before spot ${nextDown[1]}.`;
+    } else out += ` That puts ${name} at ${lbl(tier)}.`;
     if (crowdTiers(set, date)) out += " Tiers here also lean on what players typed on earlier days.";
     return out;
   }
