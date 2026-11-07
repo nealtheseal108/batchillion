@@ -609,7 +609,8 @@
     body.innerHTML = list.length ? `<ol class="board">${rows}</ol>` : `<p class="hint">${view === "today" ? "nobody has thrown yet today. be first." : "no rounds yet."}</p>`;
     dlg.querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => board(b.dataset.v)));
   }
-  $("#boardAdmin").onclick = () => { $("#board").close(); admin(); };
+  // Guarded: during a deploy a cached older page can lack this button, and a crash here would blank the game.
+  if ($("#boardAdmin")) $("#boardAdmin").onclick = () => { $("#board").close(); admin(); };
 
   // ---------- admin: rank appeals ----------
   async function admin() {

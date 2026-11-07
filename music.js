@@ -1,4 +1,4 @@
-// Sideline music: the same playlist and player as the World Cup site, through YouTube's IFrame API.
+// Footer music: the same playlist and player as the World Cup site, through YouTube's IFrame API.
 // Fades in and out between songs, prev / play-pause / next / loop-one, skips anything that won't
 // embed. Starts on the first tap anywhere unless this viewer turned the music off before.
 (() => {
@@ -17,6 +17,7 @@
   ];
   const MAXVOL = 45, FADE_MS = 2500, FADE_TICK = 80;
   const $ = (s) => document.querySelector(s);
+  if (!$("#tunes")) return; // a cached older page without the player: do nothing rather than crash
   const pref = {
     get() { try { return localStorage.getItem("bh:music"); } catch { return null; } },
     set(v) { try { localStorage.setItem("bh:music", v); } catch {} },
@@ -102,15 +103,11 @@
   };
 
   // Controls
-  const tunes = $("#tunes"), tab = $("#tunesTab");
-  const setOpen = (open) => { tunes.classList.toggle("open", open); tab.setAttribute("aria-expanded", String(open)); };
-  tab.onclick = () => setOpen(!tunes.classList.contains("open"));
+  const tunes = $("#tunes");
   $("#pbPlay").onclick = () => { if (on) { pause(); pref.set("off"); } else { start(); pref.set("on"); } };
   $("#pbNext").onclick = () => { pref.set("on"); next(); };
   $("#pbPrev").onclick = () => { pref.set("on"); prev(); };
   $("#pbLoop").onclick = () => { repeatOne = !repeatOne; paint(); };
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
-  document.addEventListener("pointerdown", (e) => { if (!tunes.contains(e.target)) setOpen(false); });
 
   // Like the World Cup site: the first tap anywhere starts the music, unless this viewer paused it before.
   if (pref.get() !== "off") document.addEventListener("pointerdown", function first(e) {
@@ -118,19 +115,5 @@
     if (!tunes.contains(e.target)) start();
   }, true);
 
-  // Phones and tablets: pin the tab to the top of the far end zone so it scrolls with the field and
-  // never covers the header, the name box or buttons. Big screens use the fixed side dock (CSS).
-  const small = matchMedia("(max-width: 899px)"), field = $(".field-wrap");
-  function place() {
-    if (!small.matches || !field) { tunes.style.top = ""; return; }
-    tunes.style.top = Math.round(field.getBoundingClientRect().top + scrollY + 14) + "px";
-  }
-  place();
-  addEventListener("resize", place);
-  small.addEventListener("change", place);
-  if (window.ResizeObserver) new ResizeObserver(place).observe($(".jersey"));
-
-  // Big screens start with the player slid out; phones keep it tucked away.
-  if (matchMedia("(min-width: 1280px)").matches) setOpen(true);
   paint();
 })();

@@ -34,7 +34,7 @@ body {
   background: var(--ground); color: var(--navy);
   font: 400 16px/1.45 var(--text);
   display: flex; flex-direction: column;
-  padding: 0 16px; overflow-x: hidden; position: relative;
+  padding: 0 16px; overflow-x: hidden; position: relative; z-index: 0;   /* own stacking context, so the backdrop can sit at -1 */
 }
 button { font: inherit; color: inherit; cursor: pointer; }
 :focus-visible { outline: 3px solid var(--navy); outline-offset: 3px; box-shadow: 0 0 0 6px var(--white); }
@@ -47,7 +47,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* ---------- backdrop: watermark + dogwoods bleeding off the corners ---------- */
 /* scrolls with the page (absolute inside body), so the flowers move with the content */
-.deco { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.deco { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: -1; }   /* always behind every block, however the rest is positioned */
 .wm { position: absolute; inset: -40px -10vw auto -6vw; display: grid; gap: 0; }
 .wm span {
   display: block; white-space: nowrap; color: var(--wm);
@@ -108,7 +108,8 @@ h1 {
 
 /* ---------- field ---------- */
 .field-wrap {
-  max-width: 1100px; width: 100%; margin: 24px auto 0; padding: 5px;
+  /* on short windows the field narrows (keeping its 4:1 shape) so the game card keeps room */
+  max-width: 1100px; width: min(100%, calc(32vh * 4 + 18px)); width: min(100%, calc(32dvh * 4 + 18px)); margin: clamp(10px, 2.6dvh, 24px) auto 0; padding: 5px;
   background: var(--white); border: 4px solid var(--navy); border-radius: 14px;
   box-shadow: 0 0 0 3px var(--white), 0 0 0 5px var(--navy);
 }
@@ -129,7 +130,7 @@ h1 {
 #trails circle { stroke: var(--navy); stroke-width: 3; }
 
 /* ---------- cards: ringed collar ---------- */
-.stage { max-width: 760px; width: 100%; margin: 32px auto 28px; }
+.stage { max-width: 760px; width: 100%; margin: clamp(12px, 3.5dvh, 32px) auto clamp(10px, 3dvh, 28px); }
 .card {
   position: relative; background: var(--white); padding: 28px 28px 26px;
   border: 5px solid var(--navy); border-radius: 18px;
@@ -230,7 +231,7 @@ input:focus { box-shadow: 0 0 0 3px var(--carolina); }
 .appeal .q { color: var(--graphite); font-size: 13px; margin: 0 0 8px; }
 
 /* ---------- footer, dialog, toast ---------- */
-.foot { max-width: 1100px; width: 100%; margin: 0 auto 22px; padding-top: 22px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--graphite); font-size: 14px; }
+.foot { max-width: 1100px; width: 100%; margin: 0 auto clamp(10px, 2.4dvh, 22px); padding-top: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--graphite); font-size: 14px; }
 .foot > span { background: var(--white); border-radius: 8px; padding: 6px 12px 5px; box-shadow: inset 0 0 0 2px var(--navy), 0 0 0 3px var(--ground); }   /* woven kit tags */
 #dayNum { font: 800 18px/1.2 var(--num); letter-spacing: .2em; color: var(--navy); }
 .linkish { background: none; border: 0; color: var(--navy); font: 700 15px var(--text); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; text-decoration-color: var(--carolina); padding: 0; }
@@ -306,46 +307,38 @@ dialog ol li::marker { font: 800 17px var(--num); color: var(--ink); }
   #dayNum { font-size: 15px; letter-spacing: .14em; }
 }
 
-/* ---------- sideline music (music.js) ---------- */
+/* ---------- footer music player (music.js) ---------- */
 #ythost { position: fixed; width: 1px; height: 1px; left: -9999px; top: -9999px; opacity: 0; pointer-events: none; }
-.tunes { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 30; display: flex; align-items: center; flex-direction: row-reverse; }
-.tunes-tab {
-  position: relative; width: 46px; height: 64px; border: 0; padding: 0; display: grid; place-items: center;
-  background: var(--navy); color: var(--white); border-radius: 14px 0 0 14px;
-  box-shadow: inset 0 0 0 2px var(--navy), inset 0 0 0 4px var(--carolina);
+.tunes {
+  display: flex; align-items: center; gap: 10px; min-width: 0; flex: 0 1 440px;
+  background: var(--white); border-radius: 10px; padding: 4px 5px 4px 10px;
+  box-shadow: inset 0 0 0 2px var(--navy), 0 0 0 3px var(--ground);
 }
-.tunes-tab .ic-note { width: 22px; height: 22px; fill: currentColor; }
-.tunes .eq { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: none; gap: 2px; height: 10px; align-items: flex-end; }
-.tunes .eq i { display: block; width: 3px; height: 100%; background: var(--carolina); border-radius: 2px; animation: eq .9s ease-in-out infinite; }
+.tunes-ic { position: relative; flex: none; width: 22px; height: 22px; display: grid; place-items: center; color: var(--navy); }
+.tunes-ic .ic-note { width: 18px; height: 18px; fill: currentColor; }
+.tunes .eq { position: absolute; inset: 3px 2px; display: none; gap: 2px; align-items: flex-end; }
+.tunes .eq i { display: block; flex: 1; height: 100%; background: var(--carolina); border-radius: 2px; transform-origin: bottom; animation: eq .9s ease-in-out infinite; }
 .tunes .eq i:nth-child(2) { animation-delay: -.3s; } .tunes .eq i:nth-child(3) { animation-delay: -.6s; }
 @keyframes eq { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
 .tunes.playing .eq { display: flex; }
-.tunes.playing .ic-note { transform: translateY(-4px); }
-.tunes-panel {
-  display: none; width: 230px; margin-right: -2px; padding: 14px 16px 14px;
-  background: var(--white); color: var(--navy); border: 4px solid var(--navy); border-right: 0; border-radius: 16px 0 0 16px;
-  box-shadow: inset 0 0 0 2px var(--white), inset 0 0 0 4px var(--carolina);
-}
-.tunes.open .tunes-panel { display: block; }
-.tunes-kicker { margin: 0 0 6px; font: 800 12px/1 var(--num); letter-spacing: .2em; text-transform: uppercase; color: var(--graphite); }
-.tunes-title { margin: 0; font: italic 800 17px/1.2 var(--script); overflow-wrap: anywhere; }
-.tunes-artist { margin: 2px 0 10px; font-size: 13px; color: var(--graphite); }
-.tunes-ctrls { display: flex; gap: 6px; align-items: center; }
-.tb { width: 36px; height: 36px; border: 0; padding: 0; display: grid; place-items: center; border-radius: 50%; background: var(--white); color: var(--navy); box-shadow: inset 0 0 0 2px var(--navy); }
-.tb svg { width: 18px; height: 18px; fill: currentColor; }
+.tunes.playing .ic-note { visibility: hidden; }
+.tunes-now { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+.tunes-title, .tunes-artist { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tunes-title { font: italic 800 14px/1.2 var(--script); color: var(--navy); }
+.tunes-artist { font-size: 12px; color: var(--graphite); }
+.tunes-ctrls { flex: none; display: flex; gap: 4px; align-items: center; }
+.tb { width: 30px; height: 30px; border: 0; padding: 0; display: grid; place-items: center; border-radius: 50%; background: var(--white); color: var(--navy); box-shadow: inset 0 0 0 2px var(--navy); }
+.tb svg { width: 15px; height: 15px; fill: currentColor; }
 .tb:hover { background: var(--carolina-tint); }
-.tb-play { width: 44px; height: 44px; background: var(--navy); color: var(--white); box-shadow: inset 0 0 0 2px var(--navy), inset 0 0 0 4px var(--white); }
+.tb-play { width: 34px; height: 34px; background: var(--navy); color: var(--white); box-shadow: inset 0 0 0 2px var(--navy), inset 0 0 0 4px var(--white); }
 .tb-play:hover { background: var(--ink); }
 .tb-play .i-pause, .tb-play.is-on .i-play { display: none; }
 .tb-play.is-on .i-pause { display: block; }
 .tb-loop.is-on { background: var(--navy); color: var(--white); }
 @media (prefers-reduced-motion: reduce) { .tunes .eq i { animation: none; } }
-/* phones: tuck the tab up by the field so it never covers the name box or buttons */
-@media (max-width: 899px) {
-  .tunes { position: absolute; top: 0; transform: none; align-items: flex-start; }
-  .tunes-tab { width: 38px; height: 50px; border-radius: 12px 0 0 12px; }
-  .tunes-tab .ic-note { width: 18px; height: 18px; }
-  .tunes-panel { width: 210px; padding: 12px 14px; }
+/* phones: the player takes its own row above the two footer tags */
+@media (max-width: 640px) {
+  .tunes { order: -1; flex: 1 1 100%; }
 }
 
 /* ---------- modals (how to play, leaderboard): fixed head, scrolling middle, pinned foot ---------- */
