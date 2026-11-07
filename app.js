@@ -399,7 +399,7 @@
         <p class="kicker">BATCHILLION #${dayNum()}${practice ? " · PRACTICE" : ""}${st ? ` · STREAK ${st}` : ""}</p>
         <p class="prompt">You're up, <em>${esc(me.player)}</em>. Pick a round. The rarer the pick, the deeper the huck.</p>
         <p class="hint">${today.rounds.length ? `Today: ${today.rounds.length} round${today.rounds.length > 1 ? "s" : ""}, ${today.yards} yards. ` : ""}Players: ${left ? `${left} teammate${left > 1 ? "s" : ""} left for you; a name you use there is gone for good.` : "you've used every teammate."} Stat sheets: reuse any name, any time.</p>
-        <div class="picks">${openRounds().map((r, i) => `<button class="btn pick${i ? " ghost" : ""}" data-set="${r.id}" type="button" ${spends(r.id) && !left ? "disabled" : ""}><span>${esc(r.title)}${r.unlock ? ' <b class="new">new</b>' : ""}</span><small>${spends(r.id) ? "names are gone for good" : "reuse any name"}</small></button>`).join("")}</div>
+        <div class="picks">${openRounds().map((r, i) => `<button class="btn pick${i ? " ghost" : ""}" data-set="${r.id}" type="button" ${spends(r.id) && !left ? "disabled" : ""}><span>${esc(r.title)}${r.unlock ? ' <b class="new">new</b>' : ""}</span><small>${spends(r.id) ? "names are gone for good" : "reuse any name"}</small><small>max ${maxFor(r.id, h.used)} yds</small></button>`).join("")}</div>
         <div class="row"><button class="linkish" id="out" type="button">not ${esc(me.player)}? sign out</button></div>
       </div>`);
     const first = stage.querySelector("[data-set]"); if (first) first.focus();
@@ -407,6 +407,25 @@
     $("#out").onclick = signOut;
   }
 
+  // The most yards a round can still give this player: stat sheets take each prompt's best answer
+  // (names can repeat); Players needs 7 different unused teammates, so it searches the best distinct picks.
+  // Keeping each prompt's top 7 candidates is exact: 6 other prompts can take at most 6 of them.
+  function maxFor(id, used) {
+    const R = setOf(id), pts = (q, p) => T[tierFor(q, p)].pts;
+    const C = R.prompts.map((q) => people.filter((p) => fits(q, p) && (!spends(id) || !used.has(p.key))).sort((a, b) => pts(q, b) - pts(q, a)).slice(0, 7));
+    if (!spends(id)) return C.reduce((s, c, k) => s + (c.length ? pts(R.prompts[k], c[0]) : 0), 0);
+    const top = C.map((c, k) => (c.length ? pts(R.prompts[k], c[0]) : 0));
+    let best = 0;
+    const go = (k, taken, sum) => {
+      if (k === C.length) { best = Math.max(best, sum); return; }
+      if (sum + top.slice(k).reduce((a, b) => a + b, 0) <= best) return;
+      let any = false;
+      for (const p of C[k]) if (!taken.has(p.key)) { any = true; taken.add(p.key); go(k + 1, taken, sum + pts(R.prompts[k], p)); taken.delete(p.key); }
+      if (!any) go(k + 1, taken, sum);
+    };
+    go(0, new Set(), 0);
+    return best;
+  }
   const openRounds = () => ROUNDS.filter((r) => !r.unlock || dayIndex(dayKey) >= dayIndex(r.unlock));
   // Opens a round of the chosen type on the server (or picks up one left open), then plays it.
   async function startRound(btn, set = "classes") {
