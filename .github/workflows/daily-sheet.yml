@@ -1,12 +1,12 @@
 # Adds a new Batchillion stat sheet every day at midnight Eastern (tools/daily_sheet.py).
-# Two cron times cover daylight saving: 04:00 UTC is midnight in EDT, 05:00 UTC is midnight in EST. The script
-# acts only between midnight and 3:59 Eastern (or on a manual run) and does nothing if today's sheet exists.
+# GitHub often delays or drops scheduled runs at the top of the hour, so this runs a few minutes past and then
+# retries every 30 minutes until 3:37 Eastern (UTC times cover both EDT and EST). The script acts only between midnight
+# and 3:59 Eastern (or on a manual run) and does nothing if today's sheet exists, so the extra runs are harmless.
 name: daily stat sheet
 
 on:
   schedule:
-    - cron: "0 4 * * *"
-    - cron: "0 5 * * *"
+    - cron: "7,37 4-8 * * *"
   workflow_dispatch:
 
 permissions:
