@@ -44,7 +44,11 @@ def sheets_in(js):
     return [{'id': m.group(1), 'n': int(m.group(2)), 'title': m.group(3), 'retired': 'retired: true' in m.group(4), 'unlock': m.group(5)} for m in HEAD.finditer(js)]
 
 
-PER_PLAYER = ('to', 'from', 'goalfrom', 'tour-to', 'tour-from', 'oline-from', 'oline-to', 'dline-from', 'dline-to')
+# Neal's approved Nov 7 question kinds (linemates, game situations, combos, endurance, opponents): picked ahead of the rest.
+NEW_KINDS = {'linemate', 'break-with', 'first-goal', 'first-ast', 'decider', 'tying-on', 'tying-goal', 'goahead-on', 'last3', 'combo-same',
+             'combo-spread', 'combo-spreadin', 'combo-ast', 'streak', 'od-games', 'pull-hang', 'pull-top', 'goal-lost', 'ast-lost', 'd-lost',
+             'touch-lost', 'goal-won', 'ast-won', 'd-won', 'touch-won', 'goal-behind', 'ast-behind', 'goal-tied', 'ast-tied'}
+PER_PLAYER = ('to', 'from', 'goalfrom', 'tour-to', 'tour-from', 'oline-from', 'oline-to', 'dline-from', 'dline-to', 'linemate', 'break-with')
 
 
 def kind(c):
@@ -84,7 +88,7 @@ def build(day, js, pool):
     found = []
     for attempt in range(4000):
         k = 2 if attempt < 3000 else 3   # spend stars slowly: 2 a day unless only 3 makes a sheet
-        key = lambda c: abs(c['n'] - AIM) / 2 + (0 if c['best'] == 100 else 3) + rng.random() * 6   # near 13 answers, a single fewest, some variety
+        key = lambda c: abs(c['n'] - AIM) / 2 + (0 if c['best'] == 100 else 3) + rng.random() * 6 - (4 if c['concept'] in NEW_KINDS else 0)   # near 13 answers, a single fewest, some variety, Neal's Nov 7 kinds first
         pick = []
         def fits(c):
             if any(base(c) == base(p) for p in pick): return False

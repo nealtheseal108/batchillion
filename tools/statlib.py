@@ -272,4 +272,111 @@ def candidates(path):
     add('comp8', '8+ completed throws', 'who has completed 8 or more throws this season (assists included)', cnt('comp', 8), False, 'comps')
     add('comp40', '40+ completed throws', 'who has completed 40 or more throws this season (assists included)', cnt('comp', 40), False, 'comps')
     add('g3-bankrununccx', '3+ points vs UNCCX', 'who played 3 or more points in the UNCCX game at Bankrun (Sept 20)', {n: len(v) for n, v in gp[('Bankrun', 'UNCCX')].items() if len(v) >= 3}, False, 'game-pts', 'bankrununccx', 'Bankrun')
+    situations(rows, add, lineup, catch, goal, E, touch)
     return C, {full(n): s(n, 'pts') for n in N}, pt_fame(rows)
+
+
+def situations(rows, add, lineup, catch, goal, E, touch):
+    """Neal's approved Nov 7 ideas (Batchillion-Prompts.md): linemates, game situations, combos, endurance, pulls and
+    opponents. Every point is (game, our score, their score at the end of it); points in a game are ordered by total score."""
+    best = lambda counts, ts: max(((t, {n: v for n, v in counts.items() if ok(n) and v >= t}) for t in ts),
+                                  key=lambda th: (10 <= len(th[1]) <= 19, -abs(len(th[1]) - 13)))
+    gid = lambda x: (g(x, 'Tournamemnt'), on(g(x, 'Opponent')), g(x, 'Date/Time')[:10])
+    P = collections.defaultdict(lambda: {'on': set(), 'line': '', 'goal': False, 'rows': []})
+    for x in rows:
+        try: k = gid(x) + (int(g(x, 'Our Score - End of Point')), int(g(x, 'Their Score - End of Point')))
+        except ValueError: continue
+        pt = P[k]; pt['on'] |= set(lineup(x)); pt['line'] = g(x, 'Line'); pt['rows'].append(x)
+        if goal(x): pt['goal'] = True
+    for k, pt in P.items():   # score when the point started
+        pt['start'] = (k[3] - 1, k[4]) if pt['goal'] else (k[3], k[4] - 1)
+    games = collections.defaultdict(list)
+    for k in sorted(P, key=lambda k: (k[:3], k[3] + k[4])): games[k[:3]].append(k)
+    final = {gm: (max(k[3] for k in ks), max(k[4] for k in ks)) for gm, ks in games.items()}
+    lost = {gm for gm, (o, t) in final.items() if o < t}
+    won = {gm for gm, (o, t) in final.items() if o > t}
+
+    # ---- linemates: points on the field together, and breaks together (a D point that ended in a BatCH goal)
+    together = collections.defaultdict(collections.Counter); brk = collections.defaultdict(collections.Counter)
+    for pt in P.values():
+        for a in pt['on']:
+            for b in pt['on']:
+                if a != b:
+                    together[a][b] += 1
+                    if pt['line'] == 'D' and pt['goal']: brk[a][b] += 1
+    for a in sorted(together):
+        nm = full(a)
+        t, hit = best(together[a], (5, 10, 15, 20, 25, 30, 40, 50))
+        add(f'with{t}-{SLUG(nm)}', f'{t}+ points on the field with {nm}', f'who played {t} or more points on the same line as {nm} this season', hit, False, 'linemate')
+        add(f'brkwith-{SLUG(nm)}', f'on the field with {nm} for a break', f'who was on the field with {nm} for a break (a D point that ended in a BatCH goal) this season', brk[a], False, 'break-with')
+
+    # ---- game situations
+    first = [next((x for k in ks for x in P[k]['rows'] if goal(x)), None) for ks in games.values()]
+    first = [x for x in first if x]
+    add('first-goal', 'caught the first goal of a game', "who caught BatCH's first goal of a game this season", collections.Counter(g(x, 'Receiver') for x in first), False, 'first-goal')
+    add('first-ast', 'threw the first assist of a game', "who threw the assist on BatCH's first goal of a game this season", collections.Counter(g(x, 'Passer') for x in first), False, 'first-ast')
+    decider = [P[ks[-1]] for ks in games.values() if P[ks[-1]]['start'][0] == P[ks[-1]]['start'][1]]
+    add('decider', 'played a game-deciding point', 'who played the last point of a game that started with the score tied (universe point) this season', collections.Counter(n for pt in decider for n in pt['on']), False, 'decider')
+    equal = [pt for pt in P.values() if pt['goal'] and pt['start'][0] + 1 == pt['start'][1]]
+    add('tying-on', 'on the field for a game-tying goal', 'who was on the field when BatCH caught a goal that tied the game this season', collections.Counter(n for pt in equal for n in pt['on']), False, 'tying-on')
+    add('tying-goal', 'caught a game-tying goal', 'who caught a goal that tied the game this season', collections.Counter(g(x, 'Receiver') for pt in equal for x in pt['rows'] if goal(x)), False, 'tying-goal')
+    ahead = [pt for pt in P.values() if pt['goal'] and pt['start'][0] == pt['start'][1]]
+    add('goahead-on', 'on the field for a go-ahead goal', 'who was on the field when BatCH caught a goal that broke a tie this season', collections.Counter(n for pt in ahead for n in pt['on']), False, 'goahead-on')
+    late = [P[k] for ks in games.values() for k in ks[-3:]]
+    t, hit = best(collections.Counter(n for pt in late for n in pt['on']), (2, 3, 4, 5, 6, 8))
+    add(f'last3-{t}', f'played {t}+ game-closing points', f'who played {t} or more game-closing points this season (the last 3 points of each game)', hit, False, 'last3')
+
+    # ---- combos
+    to = collections.defaultdict(collections.Counter); fr = collections.defaultdict(collections.Counter)
+    for x in rows:
+        if catch(x) and ok(g(x, 'Passer')) and ok(g(x, 'Receiver')):
+            to[g(x, 'Passer')][g(x, 'Receiver')] += 1; fr[g(x, 'Receiver')][g(x, 'Passer')] += 1
+    t, hit = best({n: max(c.values()) for n, c in to.items()}, (3, 5, 8, 10, 15))
+    add(f'same-recv{t}', f'threw to the same teammate {t}+ times', f'who completed {t} or more passes to one teammate this season', hit, False, 'combo-same')
+    t, hit = best({n: len(c) for n, c in to.items()}, (3, 5, 6, 8, 10, 12))
+    add(f'recv-spread{t}', f'completed passes to {t}+ teammates', f'who completed passes to {t} or more different teammates this season', hit, False, 'combo-spread')
+    t, hit = best({n: len(c) for n, c in fr.items()}, (3, 5, 6, 8, 10, 12))
+    add(f'from-spread{t}', f'caught passes from {t}+ teammates', f'who caught passes from {t} or more different teammates this season', hit, False, 'combo-spreadin')
+    ast = collections.defaultdict(set)
+    for x in rows:
+        if goal(x) and ok(g(x, 'Passer')) and ok(g(x, 'Receiver')): ast[g(x, 'Passer')].add(g(x, 'Receiver'))
+    t, hit = best({n: len(v) for n, v in ast.items()}, (2, 3, 4, 5))
+    add(f'ast-spread{t}', f'threw assists to {t}+ teammates', f'who threw assists to {t} or more different teammates this season', hit, False, 'combo-ast')
+
+    # ---- endurance
+    run = collections.Counter(); both = collections.Counter()
+    for ks in games.values():
+        seen = collections.defaultdict(set); cur = collections.Counter()
+        for k in ks:
+            for n in P[k]['on']: seen[n].add(P[k]['line'])
+            for n in list(cur):
+                if n not in P[k]['on']: cur[n] = 0
+            for n in P[k]['on']: cur[n] += 1; run[n] = max(run[n], cur[n])
+        for n, ls in seen.items():
+            if ls >= {'O', 'D'}: both[n] += 1
+    t, hit = best(run, (3, 4, 5, 6, 7, 8))
+    add(f'streak{t}', f'played {t}+ points in a row', f'who played {t} or more points in a row in one game this season', hit, False, 'streak')
+    t, hit = best(both, (1, 2, 3, 4, 5, 6))
+    add(f'od-games{t}', f'played O and D in {t}+ games', f'who played both O points and D points in the same game, in {t} or more games this season', hit, False, 'od-games')
+
+    # ---- pulls
+    hang = collections.defaultdict(list)
+    for x in rows:
+        try: h = float(g(x, 'Hang Time (secs)'))
+        except ValueError: continue
+        if ok(g(x, 'Defender')): hang[g(x, 'Defender')].append(h)
+    add('hang4', 'a 4+ second pull', 'who threw a pull that hung 4 or more seconds this season', {n: sum(1 for h in v if h >= 4) for n, v in hang.items()}, False, 'pull-hang')
+    top = collections.Counter()
+    for ks in games.values():
+        ps = [(float(g(x, 'Hang Time (secs)')), g(x, 'Defender')) for k in ks for x in P[k]['rows'] if g(x, 'Hang Time (secs)') and ok(g(x, 'Defender'))]
+        if ps: top[max(ps)[1]] += 1
+    add('hang-top', 'the longest pull of a game', 'who threw the longest-hanging pull of a game this season', top, False, 'pull-top')
+
+    # ---- opponents: games BatCH lost or won
+    for which, games_, word in (('lost', lost, 'lost'), ('won', won, 'won')):
+        G = [x for x in rows if gid(x) in games_]
+        add(f'goal-{which}', f'caught a goal in a game BatCH {word}', f'who caught a goal in a game BatCH {word} this season', collections.Counter(g(x, 'Receiver') for x in G if goal(x)), False, f'goal-{which}')
+        add(f'ast-{which}', f'threw an assist in a game BatCH {word}', f'who threw an assist in a game BatCH {word} this season', collections.Counter(g(x, 'Passer') for x in G if goal(x)), False, f'ast-{which}')
+        add(f'd-{which}', f'got a D in a game BatCH {word}', f'who got a D (block) in a game BatCH {word} this season', collections.Counter(g(x, 'Defender') for x in G if E(x) == ('Defense', 'D')), False, f'd-{which}')
+        t, hit = best(collections.Counter(n for x in G for n in touch(x)), (3, 5, 8, 10, 15, 20))
+        add(f'touch-{which}{t}', f'{t}+ touches in games BatCH {word}', f'who touched the disc {t} or more times in games BatCH {word} this season', hit, False, f'touch-{which}')
