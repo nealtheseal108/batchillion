@@ -91,7 +91,7 @@ def candidates(path):
 
     def add(k, short, text, d, ratio, concept, game='', tour=''):
         d = {full(n): v for n, v in d.items() if ok(n) and v}
-        C[k] = (short, text, d, ratio, concept, game, tour)
+        C[k] = (short, text, d, ratio, concept, game, tour, None, '')
 
     # game labels from the data: "the UNCCX game at Bankrun (Sept 20)"; the Duke scrim is "the Duke scrim (Nov 5)"
     dates = collections.defaultdict(set)
@@ -273,6 +273,29 @@ def candidates(path):
     add('comp8', '8+ completed throws', 'who has completed 8 or more throws this season (assists included)', cnt('comp', 8), False, 'comps')
     add('comp40', '40+ completed throws', 'who has completed 40 or more throws this season (assists included)', cnt('comp', 40), False, 'comps')
     add('g3-bankrununccx', '3+ points vs UNCCX', 'who played 3 or more points in the UNCCX game at Bankrun (Sept 20)', {n: len(v) for n, v in gp[('Bankrun', 'UNCCX')].items() if len(v) >= 3}, False, 'game-pts', 'bankrununccx', 'Bankrun')
+    # ---- the two real counts behind every ratio, so explanations can say "9 catches in 17 points"
+    raw = {full(n): n for n in S}
+    tch = lambda n: s(n, 'rec') + thr(n)
+    PARTS = {'finish': (lambda n: (s(n, 'goal'), s(n, 'rec')), '{a} goals on {b} catches'),
+             'astshare': (lambda n: (s(n, 'ast'), s(n, 'comp')), '{a} assists on {b} completed throws'),
+             'c2t': (lambda n: (s(n, 'rec'), s(n, 'comp')), '{a} catches and {b} completed throws'),
+             't2c': (lambda n: (s(n, 'comp'), s(n, 'rec')), '{a} completed throws and {b} catches'),
+             'touchO': (lambda n: (tch(n), s(n, 'o')), '{a} touches over {b} O points (all touches)'),
+             'drate': (lambda n: (s(n, 'd'), s(n, 'dp')), '{a} Ds in {b} D points'),
+             'comp%': (lambda n: (s(n, 'comp'), thr(n)), '{a} completions on {b} throws'),
+             'catch%': (lambda n: (s(n, 'rec'), s(n, 'rec') + s(n, 'drop')), '{a} catches on {b} passes thrown to them'),
+             'goalrate': (lambda n: (s(n, 'goal'), s(n, 'pts')), '{a} goals in {b} points'),
+             'touchrate': (lambda n: (tch(n), s(n, 'pts')), '{a} touches in {b} points'),
+             'ta%': (lambda n: (s(n, 'ta'), thr(n)), '{a} throwaways on {b} throws'),
+             'drop%': (lambda n: (s(n, 'drop'), s(n, 'rec') + s(n, 'drop')), '{a} drops on {b} passes thrown to them')}
+    for k, c in list(C.items()):
+        if not c[3]: continue
+        if c[4] in PARTS:
+            f, nf = PARTS[c[4]]
+            C[k] = c[:7] + ({n: list(f(raw[n])) for n in c[2] if n in raw}, nf)
+        elif c[4] == 'tour-catchrate':
+            t = c[6]; got = collections.Counter(g(x, 'Receiver') for x in rows if g(x, 'Tournamemnt') == t and catch(x))
+            C[k] = c[:7] + ({n: [got[raw[n]], len(tp[t][raw[n]])] for n in c[2] if n in raw}, '{a} catches in {b} points at ' + t)
     situations(rows, add, lineup, catch, goal, E, touch)
     return C, {full(n): s(n, 'pts') for n in N}, pt_fame(rows)
 

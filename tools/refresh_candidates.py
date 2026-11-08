@@ -14,10 +14,12 @@ if len(sys.argv) != 2:
     sys.exit(__doc__)
 C, PP, PTF = candidates(sys.argv[1])
 out = {'generated': datetime.date.today().isoformat(), 'points': PP, 'pt_fame': PTF, 'candidates': []}
-for k, (short, text, vals, ratio, concept, game, tour) in sorted(C.items()):
+for k, (short, text, vals, ratio, concept, game, tour, parts, nf) in sorted(C.items()):
     if banned(k) or not vals: continue
     if 'scored' in text: raise SystemExit(f'{k}: say "caught a goal"/"threw an assist", never "scored"')
-    out['candidates'].append({'id': k, 'short': short, 'text': text, 'concept': concept, 'game': game, 'tour': tour, 'ratio': ratio, 'values': vals})
+    c = {'id': k, 'short': short, 'text': text, 'concept': concept, 'game': game, 'tour': tour, 'ratio': ratio, 'values': vals}
+    if parts: c['parts'], c['nf'] = parts, nf
+    out['candidates'].append(c)
 json.dump(out, open(os.path.join(HERE, 'candidates.json'), 'w'), indent=1, sort_keys=True)
 n = sum(1 for c in out['candidates'] if 10 <= len(c['values']) <= 19)
 print(f"wrote tools/candidates.json: {len(out['candidates'])} questions, {n} with 10-19 answers")

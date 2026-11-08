@@ -708,7 +708,9 @@
       const where = !more ? (same ? `tied for the most with ${same} other${same > 1 ? "s" : ""}` : "the most")
         : !less ? (same ? `tied for the fewest with ${same} other${same > 1 ? "s" : ""}` : "the fewest")
         : `${more + 1}${["th", "st", "nd", "rd"][((more + 1) % 100 >> 3 ^ 1) && (more + 1) % 10] || "th"} of ${n}`;
-      out = `${statSentence(q, name, v)}: ${where}${!more || !less ? ` of the ${n} teammates who fit` : " teammates who fit"}.`;
+      const pr = q.parts && Object.entries(q.parts).find(([k]) => norm(k) === person.key);
+      const counts = pr && q.nf ? ` (${q.nf.replace("{a}", pr[1][0]).replace("{b}", pr[1][1])})` : "";
+      out = `${statSentence(q, name, v)}${counts}: ${where}${!more || !less ? ` of the ${n} teammates who fit` : " teammates who fit"}.`;
     } else out = `${n} teammates fit this one.`;
     const raw = q.obOf ? tierize(q.obOf)[person.key] : null, c = capOf(person.key);
     const capped = raw && ORDER.indexOf(raw) < ORDER.indexOf(tier) && tier === c;

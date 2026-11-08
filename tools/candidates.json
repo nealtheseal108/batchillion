@@ -268,6 +268,89 @@
    "concept": "astshare",
    "game": "",
    "id": "astshare3",
+   "nf": "{a} assists on {b} completed throws",
+   "parts": {
+    "Aashay Rathi": [
+     5,
+     43
+    ],
+    "Andrew Carneiro": [
+     1,
+     9
+    ],
+    "Ben Horton": [
+     2,
+     17
+    ],
+    "Bryce": [
+     16,
+     90
+    ],
+    "Carson Jewell": [
+     3,
+     91
+    ],
+    "Centurion": [
+     3,
+     41
+    ],
+    "Daniel": [
+     8,
+     67
+    ],
+    "Elliot": [
+     1,
+     7
+    ],
+    "Gavin": [
+     11,
+     148
+    ],
+    "JT": [
+     1,
+     6
+    ],
+    "Kent": [
+     4,
+     67
+    ],
+    "Matthew Bain": [
+     1,
+     11
+    ],
+    "Max": [
+     6,
+     51
+    ],
+    "Micah": [
+     2,
+     36
+    ],
+    "Nate": [
+     13,
+     264
+    ],
+    "Neal": [
+     36,
+     164
+    ],
+    "Noah Goldblatt": [
+     9,
+     104
+    ],
+    "Oliver": [
+     17,
+     146
+    ],
+    "Owen": [
+     10,
+     84
+    ],
+    "Parker": [
+     8,
+     102
+    ]
+   },
    "ratio": true,
    "short": "assists on 3%+ of completions",
    "text": "who threw an assist on 3% or more of their completed throws this season (min 5 completions)",
@@ -1206,6 +1289,97 @@
    "concept": "catch%",
    "game": "",
    "id": "catch92",
+   "nf": "{a} catches on {b} passes thrown to them",
+   "parts": {
+    "Aashay Rathi": [
+     55,
+     56
+    ],
+    "Andrew Carneiro": [
+     16,
+     16
+    ],
+    "Bryce": [
+     122,
+     127
+    ],
+    "Carson Jewell": [
+     69,
+     71
+    ],
+    "Centurion": [
+     49,
+     51
+    ],
+    "Daniel": [
+     65,
+     67
+    ],
+    "Drake": [
+     5,
+     5
+    ],
+    "Dylan Edwards": [
+     5,
+     5
+    ],
+    "Elliot": [
+     6,
+     6
+    ],
+    "Ethan Berson": [
+     8,
+     8
+    ],
+    "Gavin": [
+     162,
+     166
+    ],
+    "Kent": [
+     52,
+     52
+    ],
+    "King": [
+     13,
+     13
+    ],
+    "Matthew Bain": [
+     12,
+     13
+    ],
+    "Max": [
+     55,
+     55
+    ],
+    "Micah": [
+     41,
+     42
+    ],
+    "Nate": [
+     221,
+     223
+    ],
+    "Neal": [
+     101,
+     105
+    ],
+    "Noah Goldblatt": [
+     103,
+     108
+    ],
+    "Oliver": [
+     135,
+     138
+    ],
+    "Parker": [
+     121,
+     127
+    ],
+    "Riley": [
+     5,
+     5
+    ]
+   },
    "ratio": true,
    "short": "caught 92%+ of passes",
    "text": "who caught 92% or more of the passes thrown to them this season, drops counted (min 5 catches)",
@@ -1264,6 +1438,97 @@
    "concept": "comp%",
    "game": "",
    "id": "comp75",
+   "nf": "{a} completions on {b} throws",
+   "parts": {
+    "Aashay Rathi": [
+     43,
+     53
+    ],
+    "Andrew Carneiro": [
+     9,
+     9
+    ],
+    "Bryce": [
+     90,
+     111
+    ],
+    "Carson Jewell": [
+     91,
+     108
+    ],
+    "Centurion": [
+     41,
+     46
+    ],
+    "Daniel": [
+     67,
+     82
+    ],
+    "Elliot": [
+     7,
+     7
+    ],
+    "Gavin": [
+     148,
+     167
+    ],
+    "JT": [
+     6,
+     8
+    ],
+    "Kent": [
+     67,
+     76
+    ],
+    "King": [
+     11,
+     13
+    ],
+    "Matthew Bain": [
+     11,
+     11
+    ],
+    "Max": [
+     51,
+     61
+    ],
+    "Micah": [
+     36,
+     41
+    ],
+    "Michael Sun": [
+     5,
+     6
+    ],
+    "Nate": [
+     264,
+     285
+    ],
+    "Neal": [
+     164,
+     215
+    ],
+    "Noah Goldblatt": [
+     104,
+     123
+    ],
+    "Oliver": [
+     146,
+     170
+    ],
+    "Owen": [
+     84,
+     98
+    ],
+    "Parker": [
+     102,
+     114
+    ],
+    "Riley": [
+     5,
+     6
+    ]
+   },
    "ratio": true,
    "short": "completed 75%+ of throws",
    "text": "who completed 75% or more of their throws this season (min 5 throws)",
@@ -1327,6 +1592,45 @@
    "concept": "comp%",
    "game": "",
    "id": "comp85",
+   "nf": "{a} completions on {b} throws",
+   "parts": {
+    "Centurion": [
+     41,
+     46
+    ],
+    "Gavin": [
+     148,
+     167
+    ],
+    "Kent": [
+     67,
+     76
+    ],
+    "Matthew Bain": [
+     11,
+     11
+    ],
+    "Micah": [
+     36,
+     41
+    ],
+    "Nate": [
+     264,
+     285
+    ],
+    "Oliver": [
+     146,
+     170
+    ],
+    "Owen": [
+     84,
+     98
+    ],
+    "Parker": [
+     102,
+     114
+    ]
+   },
    "ratio": true,
    "short": "completed 85%+ of throws",
    "text": "who completed 85% or more of their throws this season (min 10 throws)",
@@ -1554,6 +1858,65 @@
    "concept": "drate",
    "game": "",
    "id": "ddp12",
+   "nf": "{a} Ds in {b} D points",
+   "parts": {
+    "Andrew Carneiro": [
+     2,
+     23
+    ],
+    "Bryce": [
+     4,
+     26
+    ],
+    "Centurion": [
+     6,
+     41
+    ],
+    "Drake": [
+     3,
+     35
+    ],
+    "Elliot": [
+     4,
+     29
+    ],
+    "Gavin": [
+     10,
+     61
+    ],
+    "Kent": [
+     3,
+     16
+    ],
+    "Matthew Bain": [
+     8,
+     31
+    ],
+    "Micah": [
+     12,
+     36
+    ],
+    "Nate": [
+     5,
+     26
+    ],
+    "Noah Goldblatt": [
+     9,
+     102
+    ],
+    "Oliver": [
+     4,
+     14
+    ],
+    "Owen": [
+     8,
+     27
+    ],
+    "Parker": [
+     13,
+     55
+    ]
+   },
    "ratio": true,
    "short": "a D every 12 D points",
    "text": "who got a D at least once every 12 D points they played this season (min 10 D points played)",
@@ -1579,6 +1942,97 @@
    "concept": "drate",
    "game": "",
    "id": "ddp25",
+   "nf": "{a} Ds in {b} D points",
+   "parts": {
+    "Aashay Rathi": [
+     3,
+     37
+    ],
+    "Andrew Carneiro": [
+     2,
+     23
+    ],
+    "Ben Horton": [
+     3,
+     41
+    ],
+    "Bryce": [
+     4,
+     26
+    ],
+    "Centurion": [
+     6,
+     41
+    ],
+    "Daniel": [
+     5,
+     83
+    ],
+    "Drake": [
+     3,
+     35
+    ],
+    "Eli Card": [
+     1,
+     14
+    ],
+    "Elliot": [
+     4,
+     29
+    ],
+    "Ethan Berson": [
+     1,
+     23
+    ],
+    "Gavin": [
+     10,
+     61
+    ],
+    "Kent": [
+     3,
+     16
+    ],
+    "Matthew Bain": [
+     8,
+     31
+    ],
+    "Max": [
+     7,
+     95
+    ],
+    "Micah": [
+     12,
+     36
+    ],
+    "Michael Sun": [
+     1,
+     20
+    ],
+    "Nate": [
+     5,
+     26
+    ],
+    "Neal": [
+     9,
+     127
+    ],
+    "Noah Goldblatt": [
+     9,
+     102
+    ],
+    "Oliver": [
+     4,
+     14
+    ],
+    "Owen": [
+     8,
+     27
+    ],
+    "Parker": [
+     13,
+     55
+    ]
+   },
    "ratio": true,
    "short": "a D every 25 D points",
    "text": "who got a D at least once every 25 D points they played this season (min 10 D points played)",
@@ -2180,6 +2634,29 @@
    "concept": "drop%",
    "game": "",
    "id": "drop5",
+   "nf": "{a} drops on {b} passes thrown to them",
+   "parts": {
+    "Ben Horton": [
+     5,
+     34
+    ],
+    "JT": [
+     2,
+     12
+    ],
+    "Matthew Bain": [
+     1,
+     13
+    ],
+    "Michael Sun": [
+     3,
+     12
+    ],
+    "Owen": [
+     12,
+     122
+    ]
+   },
    "ratio": true,
    "short": "dropped 5%+ of passes",
    "text": "who dropped 5% or more of the passes thrown to them this season (min 5 catches)",
@@ -2774,6 +3251,97 @@
    "concept": "finish",
    "game": "",
    "id": "finish5",
+   "nf": "{a} goals on {b} catches",
+   "parts": {
+    "Aashay Rathi": [
+     7,
+     55
+    ],
+    "Andrew Carneiro": [
+     7,
+     16
+    ],
+    "Ben Horton": [
+     5,
+     29
+    ],
+    "Bryce": [
+     17,
+     122
+    ],
+    "Carson Jewell": [
+     4,
+     69
+    ],
+    "Centurion": [
+     5,
+     49
+    ],
+    "Daniel": [
+     4,
+     65
+    ],
+    "Drake": [
+     3,
+     5
+    ],
+    "Dylan Edwards": [
+     2,
+     5
+    ],
+    "Gavin": [
+     16,
+     162
+    ],
+    "JT": [
+     2,
+     10
+    ],
+    "Kent": [
+     7,
+     52
+    ],
+    "King": [
+     1,
+     13
+    ],
+    "Matthew Bain": [
+     1,
+     12
+    ],
+    "Max": [
+     7,
+     55
+    ],
+    "Micah": [
+     6,
+     41
+    ],
+    "Michael Sun": [
+     3,
+     9
+    ],
+    "Neal": [
+     6,
+     101
+    ],
+    "Noah Goldblatt": [
+     9,
+     103
+    ],
+    "Oliver": [
+     8,
+     135
+    ],
+    "Owen": [
+     16,
+     110
+    ],
+    "Parker": [
+     12,
+     121
+    ]
+   },
    "ratio": true,
    "short": "goals on 5%+ of catches",
    "text": "who caught a goal on 5% or more of their catches this season (min 5 catches)",
@@ -6636,6 +7204,69 @@
    "concept": "goalrate",
    "game": "",
    "id": "goal15",
+   "nf": "{a} goals in {b} points",
+   "parts": {
+    "Aashay Rathi": [
+     7,
+     82
+    ],
+    "Andrew Carneiro": [
+     7,
+     28
+    ],
+    "Ben Horton": [
+     5,
+     62
+    ],
+    "Bryce": [
+     17,
+     150
+    ],
+    "Centurion": [
+     5,
+     58
+    ],
+    "Drake": [
+     3,
+     39
+    ],
+    "Eli Card": [
+     2,
+     19
+    ],
+    "Gavin": [
+     16,
+     168
+    ],
+    "Kent": [
+     7,
+     74
+    ],
+    "Micah": [
+     6,
+     86
+    ],
+    "Michael Sun": [
+     3,
+     31
+    ],
+    "Oliver": [
+     8,
+     117
+    ],
+    "Owen": [
+     16,
+     139
+    ],
+    "Parker": [
+     12,
+     114
+    ],
+    "Ryan B": [
+     2,
+     18
+    ]
+   },
    "ratio": true,
    "short": "a goal every 15 points",
    "text": "who caught a goal at least once every 15 points they played this season (min 15 points played)",
@@ -6696,6 +7327,101 @@
    "concept": "goalrate",
    "game": "",
    "id": "goal40",
+   "nf": "{a} goals in {b} points",
+   "parts": {
+    "Aashay Rathi": [
+     7,
+     82
+    ],
+    "Andrew Carneiro": [
+     7,
+     28
+    ],
+    "Ben Horton": [
+     5,
+     62
+    ],
+    "Bryce": [
+     17,
+     150
+    ],
+    "Carson Jewell": [
+     4,
+     63
+    ],
+    "Centurion": [
+     5,
+     58
+    ],
+    "Daniel": [
+     4,
+     105
+    ],
+    "Drake": [
+     3,
+     39
+    ],
+    "Eli Card": [
+     2,
+     19
+    ],
+    "Gavin": [
+     16,
+     168
+    ],
+    "JT": [
+     2,
+     39
+    ],
+    "Kent": [
+     7,
+     74
+    ],
+    "Matthew Bain": [
+     1,
+     36
+    ],
+    "Max": [
+     7,
+     121
+    ],
+    "Micah": [
+     6,
+     86
+    ],
+    "Michael Sun": [
+     3,
+     31
+    ],
+    "Nate": [
+     6,
+     140
+    ],
+    "Neal": [
+     6,
+     169
+    ],
+    "Noah Goldblatt": [
+     9,
+     150
+    ],
+    "Oliver": [
+     8,
+     117
+    ],
+    "Owen": [
+     16,
+     139
+    ],
+    "Parker": [
+     12,
+     114
+    ],
+    "Ryan B": [
+     2,
+     18
+    ]
+   },
    "ratio": true,
    "short": "a goal every 40 points",
    "text": "who caught a goal at least once every 40 points they played this season (min 15 points played)",
@@ -9652,6 +10378,89 @@
    "concept": "ta%",
    "game": "",
    "id": "ta10",
+   "nf": "{a} throwaways on {b} throws",
+   "parts": {
+    "Aashay Rathi": [
+     10,
+     53
+    ],
+    "Ben Horton": [
+     7,
+     24
+    ],
+    "Bryce": [
+     21,
+     111
+    ],
+    "Carson Jewell": [
+     17,
+     108
+    ],
+    "Centurion": [
+     5,
+     46
+    ],
+    "Daniel": [
+     15,
+     82
+    ],
+    "Ethan Berson": [
+     3,
+     8
+    ],
+    "Gavin": [
+     19,
+     167
+    ],
+    "JT": [
+     2,
+     8
+    ],
+    "Kent": [
+     9,
+     76
+    ],
+    "King": [
+     2,
+     13
+    ],
+    "Max": [
+     10,
+     61
+    ],
+    "Micah": [
+     5,
+     41
+    ],
+    "Michael Sun": [
+     1,
+     6
+    ],
+    "Neal": [
+     51,
+     215
+    ],
+    "Noah Goldblatt": [
+     19,
+     123
+    ],
+    "Oliver": [
+     24,
+     170
+    ],
+    "Owen": [
+     14,
+     98
+    ],
+    "Parker": [
+     12,
+     114
+    ],
+    "Riley": [
+     1,
+     6
+    ]
+   },
    "ratio": true,
    "short": "threw it away on 10%+ of throws",
    "text": "who threw it away on 10% or more of their throws this season (min 5 throws)",
@@ -10070,6 +10879,69 @@
    "concept": "tour-catchrate",
    "game": "",
    "id": "tcpp-Bankrun",
+   "nf": "{a} catches in {b} points at Bankrun",
+   "parts": {
+    "Aashay Rathi": [
+     10,
+     14
+    ],
+    "Andrew Carneiro": [
+     14,
+     19
+    ],
+    "Ben Horton": [
+     8,
+     16
+    ],
+    "Bryce": [
+     19,
+     24
+    ],
+    "Carson Jewell": [
+     9,
+     15
+    ],
+    "Centurion": [
+     17,
+     23
+    ],
+    "Gavin": [
+     15,
+     23
+    ],
+    "JT": [
+     6,
+     10
+    ],
+    "Max": [
+     14,
+     16
+    ],
+    "Michael Sun": [
+     8,
+     15
+    ],
+    "Nate": [
+     31,
+     22
+    ],
+    "Noah Goldblatt": [
+     15,
+     24
+    ],
+    "Oliver": [
+     20,
+     22
+    ],
+    "Owen": [
+     13,
+     25
+    ],
+    "Parker": [
+     22,
+     22
+    ]
+   },
    "ratio": true,
    "short": "a catch every 2 points at Bankrun",
    "text": "who caught the disc at least once every 2 points they played at Bankrun (Sept 19-20, min 5 points there)",
@@ -10096,6 +10968,53 @@
    "concept": "tour-catchrate",
    "game": "",
    "id": "tcpp-Barebones",
+   "nf": "{a} catches in {b} points at Barebones",
+   "parts": {
+    "Aashay Rathi": [
+     42,
+     62
+    ],
+    "Bryce": [
+     50,
+     67
+    ],
+    "Daniel": [
+     39,
+     62
+    ],
+    "Gavin": [
+     68,
+     82
+    ],
+    "Kent": [
+     48,
+     70
+    ],
+    "Nate": [
+     86,
+     69
+    ],
+    "Neal": [
+     43,
+     76
+    ],
+    "Noah Goldblatt": [
+     40,
+     61
+    ],
+    "Oliver": [
+     69,
+     58
+    ],
+    "Owen": [
+     44,
+     61
+    ],
+    "Parker": [
+     59,
+     71
+    ]
+   },
    "ratio": true,
    "short": "a catch every 2 points at Barebones",
    "text": "who caught the disc at least once every 2 points they played at Barebones (Oct 3-4, min 5 points there)",
@@ -10118,6 +11037,61 @@
    "concept": "tour-catchrate",
    "game": "",
    "id": "tcpp-Feasterns",
+   "nf": "{a} catches in {b} points at Feasterns",
+   "parts": {
+    "Bryce": [
+     43,
+     49
+    ],
+    "Carson Jewell": [
+     53,
+     38
+    ],
+    "Centurion": [
+     32,
+     35
+    ],
+    "Daniel": [
+     24,
+     36
+    ],
+    "Gavin": [
+     74,
+     52
+    ],
+    "Max": [
+     17,
+     34
+    ],
+    "Micah": [
+     33,
+     45
+    ],
+    "Nate": [
+     104,
+     49
+    ],
+    "Neal": [
+     47,
+     56
+    ],
+    "Noah Goldblatt": [
+     43,
+     54
+    ],
+    "Oliver": [
+     40,
+     26
+    ],
+    "Owen": [
+     51,
+     46
+    ],
+    "Parker": [
+     40,
+     21
+    ]
+   },
    "ratio": true,
    "short": "a catch every 2 points at Feasterns",
    "text": "who caught the disc at least once every 2 points they played at Feasterns (Oct 16-18, min 5 points there)",
@@ -12483,6 +13457,61 @@
    "concept": "touchrate",
    "game": "",
    "id": "touch1",
+   "nf": "{a} touches in {b} points",
+   "parts": {
+    "Aashay Rathi": [
+     108,
+     82
+    ],
+    "Bryce": [
+     233,
+     150
+    ],
+    "Carson Jewell": [
+     177,
+     63
+    ],
+    "Centurion": [
+     95,
+     58
+    ],
+    "Daniel": [
+     147,
+     105
+    ],
+    "Gavin": [
+     329,
+     168
+    ],
+    "Kent": [
+     128,
+     74
+    ],
+    "Nate": [
+     506,
+     140
+    ],
+    "Neal": [
+     316,
+     169
+    ],
+    "Noah Goldblatt": [
+     226,
+     150
+    ],
+    "Oliver": [
+     305,
+     117
+    ],
+    "Owen": [
+     208,
+     139
+    ],
+    "Parker": [
+     235,
+     114
+    ]
+   },
    "ratio": true,
    "short": "a touch every point",
    "text": "who touched the disc (a catch or a throw) at least once per point they played this season (min 15 points played)",
@@ -12507,6 +13536,85 @@
    "concept": "touchrate",
    "game": "",
    "id": "touch2",
+   "nf": "{a} touches in {b} points",
+   "parts": {
+    "Aashay Rathi": [
+     108,
+     82
+    ],
+    "Andrew Carneiro": [
+     25,
+     28
+    ],
+    "Ben Horton": [
+     53,
+     62
+    ],
+    "Bryce": [
+     233,
+     150
+    ],
+    "Carson Jewell": [
+     177,
+     63
+    ],
+    "Centurion": [
+     95,
+     58
+    ],
+    "Daniel": [
+     147,
+     105
+    ],
+    "Gavin": [
+     329,
+     168
+    ],
+    "Kent": [
+     128,
+     74
+    ],
+    "Matthew Bain": [
+     23,
+     36
+    ],
+    "Max": [
+     116,
+     121
+    ],
+    "Micah": [
+     82,
+     86
+    ],
+    "Nate": [
+     506,
+     140
+    ],
+    "Neal": [
+     316,
+     169
+    ],
+    "Noah Goldblatt": [
+     226,
+     150
+    ],
+    "Oliver": [
+     305,
+     117
+    ],
+    "Owen": [
+     208,
+     139
+    ],
+    "Parker": [
+     235,
+     114
+    ],
+    "Riley": [
+     11,
+     19
+    ]
+   },
    "ratio": true,
    "short": "a touch every 2 points",
    "text": "who touched the disc (a catch or a throw) at least once every 2 points they played this season (min 15 points played)",
@@ -12537,6 +13645,101 @@
    "concept": "touchO",
    "game": "",
    "id": "touchO1",
+   "nf": "{a} touches over {b} O points (all touches)",
+   "parts": {
+    "Aashay Rathi": [
+     108,
+     45
+    ],
+    "Andrew Carneiro": [
+     25,
+     5
+    ],
+    "Ben Horton": [
+     53,
+     21
+    ],
+    "Bryce": [
+     233,
+     124
+    ],
+    "Carson Jewell": [
+     177,
+     54
+    ],
+    "Centurion": [
+     95,
+     17
+    ],
+    "Daniel": [
+     147,
+     22
+    ],
+    "Ethan Berson": [
+     16,
+     12
+    ],
+    "Gavin": [
+     329,
+     107
+    ],
+    "JT": [
+     18,
+     5
+    ],
+    "Kent": [
+     128,
+     58
+    ],
+    "King": [
+     26,
+     9
+    ],
+    "Matthew Bain": [
+     23,
+     5
+    ],
+    "Max": [
+     116,
+     26
+    ],
+    "Micah": [
+     82,
+     50
+    ],
+    "Michael Sun": [
+     15,
+     11
+    ],
+    "Nate": [
+     506,
+     114
+    ],
+    "Neal": [
+     316,
+     42
+    ],
+    "Noah Goldblatt": [
+     226,
+     48
+    ],
+    "Oliver": [
+     305,
+     103
+    ],
+    "Owen": [
+     208,
+     112
+    ],
+    "Parker": [
+     235,
+     59
+    ],
+    "Riley": [
+     11,
+     8
+    ]
+   },
    "ratio": true,
    "short": "a touch every O point",
    "text": "who averaged at least one touch (a catch or a throw) per O point they played this season (min 5 O points)",

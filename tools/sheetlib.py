@@ -97,7 +97,8 @@ def distinct_max(tier_maps):
     return best[0]
 
 
-def prompt_js(pid, short, text, tm, ob, values=None, ratio=False):
+def prompt_js(pid, short, text, tm, ob, values=None, ratio=False, parts=None, nf=''):
     extra = (f', v: {json.dumps(dict(sorted(values.items())))}' if values else '') + (', ratio: true' if ratio else '')
+    if parts: extra += f', parts: {json.dumps(dict(sorted(parts.items())))}, nf: {json.dumps(nf)}'
     return (f'      {{ id: {json.dumps(pid)}, short: {json.dumps(short)}, text: {json.dumps(text)}, '
             f'tiers: {json.dumps(dict(sorted(tm.items())))}, ob: {json.dumps(dict(sorted(ob.items())))}{extra} }}')

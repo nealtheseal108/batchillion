@@ -118,7 +118,7 @@ def build(day, js, pool):
     y, m, d = (int(x) for x in day.split('-'))
     unlock = f'{y}-{m}-{d}'
     sheet = {'id': f'stats{n}', 'title': f'Stat sheet {roman(n)}', 'unlock': unlock, 'max': mx, 'prompts': pick}
-    lines = [S.prompt_js(slug(p['id']), p['short'], p['text'], p['tm'], p['ob'], p['values'], p['ratio']) for p in pick]
+    lines = [S.prompt_js(slug(p['id']), p['short'], p['text'], p['tm'], p['ob'], p['values'], p['ratio'], p.get('parts'), p.get('nf', '')) for p in pick]
     block = f'  {{ id: "{sheet["id"]}", title: "{sheet["title"]}", unlock: "{unlock}", prompts: [\n' + ',\n'.join(lines) + ',\n    ] },'
     return sheet, block
 
