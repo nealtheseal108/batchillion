@@ -19,7 +19,8 @@ SLUG = lambda s: ''.join(c for c in s.lower() if c.isalnum())
 MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
 # Kinds that are too basic for a daily sheet (Neal, 11/7): played at a tournament, played in a game with no
 # threshold, threw an assist / caught a goal season-wide, season "played N points" filler.
-BANNED = {'tp-Bankrun', 'tp-Barebones', 'tp-Feasterns', 'ast1', 'usc-played', 'pts-season'}
+BANNED = {'tp-Bankrun', 'tp-Barebones', 'tp-Feasterns', 'ast1', 'usc-played', 'pts-season',
+          'c2t', 't2c'}   # catches vs completions (Neal, 11/8): every cutter catches more than they complete; only pickup handlers don't
 BANNED_PREFIX = ('g-',)
 
 

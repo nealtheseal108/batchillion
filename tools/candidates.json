@@ -1203,32 +1203,6 @@
    }
   },
   {
-   "concept": "c2t",
-   "game": "",
-   "id": "c2t",
-   "ratio": true,
-   "short": "more catches than completions",
-   "text": "who made more catches than completed throws this season (min 10 touches)",
-   "tour": "",
-   "values": {
-    "Aashay Rathi": 1.279,
-    "Andrew Carneiro": 1.778,
-    "Ben Horton": 1.706,
-    "Bryce": 1.356,
-    "Centurion": 1.195,
-    "Ethan Berson": 1.6,
-    "Gavin": 1.095,
-    "JT": 1.667,
-    "King": 1.182,
-    "Matthew Bain": 1.091,
-    "Max": 1.078,
-    "Micah": 1.139,
-    "Michael Sun": 1.8,
-    "Owen": 1.31,
-    "Parker": 1.186
-   }
-  },
-  {
    "concept": "catch%",
    "game": "",
    "id": "catch92",
@@ -9600,26 +9574,6 @@
     "Neal": 7,
     "Noah Goldblatt": 14,
     "Parker": 5
-   }
-  },
-  {
-   "concept": "t2c",
-   "game": "",
-   "id": "t2c",
-   "ratio": true,
-   "short": "more completions than catches",
-   "text": "who completed more throws than they caught this season (min 10 touches)",
-   "tour": "",
-   "values": {
-    "Carson Jewell": 1.319,
-    "Daniel": 1.031,
-    "Elliot": 1.167,
-    "Kent": 1.288,
-    "Nate": 1.195,
-    "Neal": 1.624,
-    "Noah Goldblatt": 1.01,
-    "Oliver": 1.081,
-    "Riley": 1.0
    }
   },
   {
