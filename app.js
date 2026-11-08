@@ -704,11 +704,13 @@
       const span = (a, b) => (a > b ? "" : a === b ? `${a}` : `${a}–${b}`);
       const ranges = [["plankton", 1, c1], ["schooler", c1 + 1, c2], ["rare", c2 + 1, c3], ["deep cut", c3 + 1, m]]
         .filter(([, a, b]) => a <= b).map(([t, a, b]) => `${span(a, b)} ${t}`).join(", ");
-      const basis = q.ratio ? " (the stat plus points played)" : "";
+      const total = all.length;
+      // Ratio questions rank by the stat plus points played, so the spot can differ from the stat's own order above.
+      if (q.ratio) out += ` Tiers on this question rank everyone by the stat plus points played (doing it over more points counts for more), so ${name}'s spot can differ from the stat alone.`;
       out += tied > 1
-        ? ` On this question's ranking${basis} those ${tied} share spots ${pos}–${pos + tied - 1} of ${m}. Tied people share one tier, and their group starts at spot ${pos}.`
-        : ` On this question's ranking${basis}, ${name} is spot ${pos} of ${m}.`;
-      out += ` Spots ${ranges}${kr ? ", and the single lowest is the one in a batchillion" : ""}, so ${tied > 1 ? "they're all" : "that's"} ${lbl(tier)}.`;
+        ? ` ${q.ratio ? "On that ranking" : "On this question's ranking"}, those ${tied} share spots ${pos}–${pos + tied - 1} of ${total}. Tied people share one tier, and their group starts at spot ${pos}.`
+        : ` ${q.ratio ? "On that ranking" : "On this question's ranking"}, ${name} is spot ${pos} of ${total}.`;
+      out += ` Spots ${ranges}${kr ? `, ${total} one in a batchillion` : ""}, so ${tied > 1 ? "they're all" : "that's"} ${lbl(tier)}.`;
       const nextDown = { plankton: ["schooler", c1 + 1], schooler: ["rare", c2 + 1], rare: ["deep cut", c3 + 1] }[tier];
       if (nextDown && nextDown[1] <= m) out += ` Not a ${nextDown[0]}, because ${tied > 1 ? "the group starts" : "they're"} before spot ${nextDown[1]}.`;
     } else out += ` That puts ${name} at ${lbl(tier)}.`;
