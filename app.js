@@ -691,7 +691,9 @@
     const raw = q.obOf ? tierize(q.obOf)[person.key] : null, c = capOf(person.key);
     const capped = raw && ORDER.indexOf(raw) < ORDER.indexOf(tier) && tier === c;
     if (capped) out += ` That alone would make them ${lbl(raw)}, but ${name} plays ${c === "rare" ? "fewer minutes than most" : "about average minutes"} this season, so the highest they can be is ${lbl(c)}.`;
-    else if (tier === "krillion") out += " Nobody else is that low on this question, so one in a batchillion.";
+    else if (tier === "krillion") out += vOf && Object.values(vOf).filter((x) => x === vOf[person.key]).length > 1
+      ? ` Several teammates are tied for the fewest, and ${name} has played the most points of them this season, so ${name} is the one in a batchillion.`
+      : " Nobody else is that low on this question, so one in a batchillion.";
     else if (q.obOf && q.obOf[person.key] != null) {
       // Spell out the ranking: where they sit, the spot ranges for each tier, and why not the next tier down.
       const ob = q.obOf, me = ob[person.key], all = Object.values(ob);

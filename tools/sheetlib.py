@@ -66,8 +66,19 @@ def prior(cnt, ratio, pp):
     return {n: round(stat[n], 3) for n in cnt}
 
 
+def break_bottom_tie(ob, pp):
+    """Neal (11/8): when several answers tie for the lowest score, the one with the most points played this season
+    is the one in a batchillion (doing it least despite the most minutes is the rarest answer). The rest of the tied
+    group moves up 0.001 so the game's own tier rules (app.js tierize) see a single lowest too."""
+    lo = min(ob.values()); low = [n for n, v in ob.items() if v == lo]
+    above = [v for v in ob.values() if v > lo]
+    if len(low) < 2 or not above or round(lo + 0.001, 3) >= min(above): return ob
+    pick = max(low, key=lambda n: (pp.get(n, 0), n))
+    return {n: (round(v + 0.001, 3) if n in low and n != pick else v) for n, v in ob.items()}
+
+
 def tier_question(values, ratio, pp, ptf):
-    ob = prior(values, ratio, pp)
+    ob = break_bottom_tie(prior(values, ratio, pp), pp)
     return capped(tiers(ob), ob, ptf), ob
 
 
