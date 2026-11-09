@@ -948,8 +948,11 @@
       $("#lbRetry").onclick = () => board(view, set); return;
     }
     buildRoster();
-    // One row per finished round (not per player): best single rounds win. Today = rounds thrown today.
-    let list = allRounds().filter((r) => r.set === set && !r.practice);
+    // Neal (11/9): every leaderboard counts only each player's first finished round of that round type; replays are
+    // practice. Today = first rounds thrown today.
+    const firsts = {};
+    allRounds().filter((r) => r.set === set && !r.practice).forEach((r) => { const k = norm(r.name); if (!firsts[k] || r.row < firsts[k].row) firsts[k] = r; });
+    let list = Object.values(firsts);
     if (view === "today") list = list.filter((r) => r.isToday);
     list.sort((a, b) => b.yards - a.yards || a.name.localeCompare(b.name));
     list = list.slice(0, 50);
@@ -966,7 +969,7 @@
         <button class="btn ${view === "today" ? "" : "ghost"}" data-v="today" type="button" aria-pressed="${view === "today"}">today</button>
         <button class="btn ${view === "all" ? "" : "ghost"}" data-v="all" type="button" aria-pressed="${view === "all"}">all-time best</button>
       </div>`;
-    body.innerHTML = list.length ? `<p class="hint">${esc(setOf(set).title)}: best single rounds, in yards</p><ol class="board">${rows}</ol>` : `<p class="hint">${view === "today" ? `nobody has finished a ${esc(setOf(set).title)} round today. be first.` : `no ${esc(setOf(set).title)} rounds yet.`}</p>`;
+    body.innerHTML = list.length ? `<p class="hint">${esc(setOf(set).title)}: first rounds only, in yards</p><ol class="board">${rows}</ol>` : `<p class="hint">${view === "today" ? `nobody has finished a ${esc(setOf(set).title)} round today. be first.` : `no ${esc(setOf(set).title)} rounds yet.`}</p>`;
     dlg.querySelectorAll("[data-v]").forEach((b) => (b.onclick = () => board(b.dataset.v, set)));
     dlg.querySelectorAll("[data-s]").forEach((b) => (b.onclick = () => board(view, b.dataset.s)));
   }
