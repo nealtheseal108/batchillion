@@ -150,8 +150,9 @@ def main():
     if a.date:
         day = a.date
     else:
-        if not a.force and now.hour > 3:
-            print(f'not midnight in Eastern time ({now:%H:%M}); nothing to do'); return 0
+        # Any run on today's Eastern date makes today's sheet if it is missing. GitHub often drops every scheduled run
+        # near midnight (2026-11-09: the only run that fired was at 07:45), so the hour no longer matters; the
+        # "already unlocks today" check below keeps the later runs harmless.
         day = now.date().isoformat()
     y, m, d = (int(x) for x in day.split('-'))
     unlock = f'{y}-{m}-{d}'
