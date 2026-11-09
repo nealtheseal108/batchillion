@@ -41,7 +41,8 @@ def tiers(cnt):
 
 def cap_for(n, ptf):
     v = ptf.get(n, 0)
-    return 'plankton' if v >= 1.10 else 'schooler' if v >= 0.90 else 'rare'
+    # Neal (11/9): fewer minutes never pushes a player below schooler; the cap is plankton (1.10+) or schooler.
+    return 'plankton' if v >= 1.10 else 'schooler'
 
 
 def capped(tm, ob, ptf):

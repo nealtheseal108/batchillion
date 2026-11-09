@@ -16,6 +16,8 @@
     { id: "U8F5G5wR1mk", title: "tv off", artist: "Kendrick Lamar" },
     { id: "0UPDBODtxzw", title: "Dracula (JENNIE Remix)", artist: "Tame Impala & JENNIE", start: 24 },
   ];
+  // Neal (11/9): a fresh random order on every page load (Fisher-Yates), so the first song isn't always the same.
+  for (let i = MUSIC.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [MUSIC[i], MUSIC[j]] = [MUSIC[j], MUSIC[i]]; }
   const MAXVOL = 45, FADE_MS = 2500, FADE_TICK = 80;
   const $ = (s) => document.querySelector(s);
   if (!$("#tunes")) return; // a cached older page without the player: do nothing rather than crash

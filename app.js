@@ -233,7 +233,7 @@
   }
   // Playing-time fame cap (roster.js PT_CAP, from points played per game vs that game's average).
   const PT_CAP = Object.fromEntries(Object.entries(window.PT_CAP || {}).map(([n, c]) => [norm(n), c]));
-  const capOf = (key) => PT_CAP[key] || "rare";
+  const capOf = (key) => PT_CAP[key] || "schooler";
   function capTiers(tm, ob) {
     const out = {};
     Object.entries(tm).forEach(([n, t]) => { const c = capOf(n); out[n] = ORDER.indexOf(t) >= ORDER.indexOf(c) ? t : c; });
@@ -714,7 +714,7 @@
     } else out = `${n} teammates fit this one.`;
     const raw = q.obOf ? tierize(q.obOf)[person.key] : null, c = capOf(person.key);
     const capped = raw && ORDER.indexOf(raw) < ORDER.indexOf(tier) && tier === c;
-    if (capped) out += ` That alone would make them ${lbl(raw)}, but ${name} plays ${c === "rare" ? "fewer minutes than most" : "about average minutes"} this season, so the highest they can be is ${lbl(c)}.`;
+    if (capped) out += ` That alone would make them ${lbl(raw)}, but ${name} plays fewer minutes than the team's regulars this season, so the highest they can be is ${lbl(c)}.`;
     else if (tier === "krillion") out += vOf && Object.values(vOf).filter((x) => x === vOf[person.key]).length > 1
       ? ` Several teammates are tied for the fewest, and ${name} has played the most points of them this season, so ${name} is the one in a batchillion.`
       : " Nobody else is that low on this question, so one in a batchillion.";

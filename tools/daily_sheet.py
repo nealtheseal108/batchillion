@@ -7,8 +7,8 @@ What it does, given today's date in America/New_York:
      round; 2-3 "star" one-in-a-batchillions (the single fewest is a high-playing-time player, fame 1.10+); no
      player is the one in a batchillion twice on one sheet; no two questions of the same kind; at most one
      question per game and two per tournament. Tiers use tools/sheetlib.py (the same rules as the game).
-  3. It appends "Stat sheet <next numeral>" (id stats<N>, unlock today) to window.ROUNDS, hides all but the
-     newest 4 live stat sheets (retired: they still score and keep their leaderboards), refreshes
+  3. It appends "Stat sheet <next numeral>" (id stats<N>, unlock today) to window.ROUNDS, retires every older
+     stat sheet (retired: they still score and keep their leaderboards), refreshes
      window.PT_CAP and bumps the asset version in index.html.
 If no valid sheet can be made, it exits 2 with the reason and writes nothing.
 
@@ -24,7 +24,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import sheetlib as S
 
-AIM, LO, HI, MIN_MAX, LIVE = 13, 10, 19, 625, 4
+AIM, LO, HI, MIN_MAX, LIVE = 13, 10, 19, 625, 1   # LIVE: Neal (11/9) only today's stat sheet stays live
 STAR_FAME = 1.10
 
 
@@ -127,7 +127,7 @@ def apply(js, sheet, block, pool):
     end = js.index('\n];', js.index('window.ROUNDS = ['))
     js = js[:end] + '\n' + block + js[end:]
     live = sorted((s for s in sheets_in(js) if not s['retired'] and s['n'] >= 5), key=lambda s: s['n'])
-    for s in live[:-LIVE]:   # hide all but the newest 4 live stat sheets; they keep scoring and leaderboards
+    for s in live[:-LIVE]:   # retire every older stat sheet; they keep scoring and leaderboards
         js = re.sub(r'(  \{ id: "' + s['id'] + r'", title: "[^"]+", )', r'\1retired: true, ', js, count=1)
     caps = {p: S.cap_for(p, pool['pt_fame']) for p in sorted(pool['pt_fame'])}
     line = '// Playing-time fame cap for stat answers (pt_fame.py): how obvious a stat answer can be.\nwindow.PT_CAP = ' + json.dumps(caps) + ';'
