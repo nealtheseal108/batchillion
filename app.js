@@ -731,12 +731,23 @@
       const total = all.length;
       // Ratio questions rank by the stat plus points played, so the spot can differ from the stat's own order above.
       if (q.ratio) out += ` Tiers on this question rank everyone by the stat plus points played (doing it over more points counts for more), so ${name}'s spot can differ from the stat alone.`;
+      // The tie-break can take one person out of a raw tie (the lowest, with the most points played, becomes the one in a
+      // batchillion). Say so, or "tied with 7 others" and "7 share spots" read as a contradiction.
+      const kKey = kr ? Object.keys(ob).find((k) => ob[k] === Math.min(...all)) : null;
+      const split = vOf && kKey && kKey !== person.key && vOf[kKey] != null && vOf[kKey] === vOf[person.key];
+      const rawTied = vOf ? Object.values(vOf).filter((x) => x === vOf[person.key]).length : 0;
+      const lead = q.ratio ? " On that ranking," : "";
+      if (split) out += ` The tie-break puts the one of those ${rawTied} who has played the most points this season at spot ${total}, the one in a batchillion.`;
       out += tied > 1
-        ? ` ${q.ratio ? "On that ranking" : "On this question's ranking"}, those ${tied} share spots ${pos}–${pos + tied - 1} of ${total}. Tied people share one tier, and their group starts at spot ${pos}.`
-        : ` ${q.ratio ? "On that ranking" : "On this question's ranking"}, ${name} is spot ${pos} of ${total}.`;
-      out += ` Spots ${ranges}${kr ? `, ${total} one in a batchillion` : ""}, so ${tied > 1 ? "they're all" : "that's"} ${lbl(tier)}.`;
+        ? `${lead} ${name} and ${tied === 2 ? `the one other ${split ? "still tied" : "tied with them"}` : `the ${tied - 1} others ${split ? "still tied" : "tied with them"}`} share spots ${pos}–${pos + tied - 1} of ${total}.`
+        : `${lead || " On this question's ranking,"} ${name} is spot ${pos} of ${total}.`;
+      out += ` Tiers by spot: ${ranges}${kr ? `, ${total} one in a batchillion` : ""}.`;
       const nextDown = { plankton: ["schooler", c1 + 1], schooler: ["rare", c2 + 1], rare: ["deep cut", c3 + 1] }[tier];
-      if (nextDown && nextDown[1] <= m) out += ` Not a ${nextDown[0]}, because ${tied > 1 ? "the group starts" : "they're"} before spot ${nextDown[1]}.`;
+      if (tied > 1) out += ` A tied group takes the tier of its first spot, and spot ${pos} is ${lbl(tier)}, so ${tied === 2 ? "both are" : `all ${tied} are`} ${lbl(tier)}${pos + tied - 1 >= (nextDown ? nextDown[1] : Infinity) ? `, even though the group reaches spot ${pos + tied - 1}` : ""}.`;
+      else {
+        out += ` That's ${lbl(tier)}.`;
+        if (nextDown && nextDown[1] <= m) out += ` Not ${nextDown[0]}, because spot ${pos} comes before spot ${nextDown[1]}.`;
+      }
     } else out += ` That puts ${name} at ${lbl(tier)}.`;
     if (crowdTiers(set, date)) out += " Tiers here also lean on what players typed on earlier days.";
     return out;
